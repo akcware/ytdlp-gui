@@ -1,6 +1,6 @@
 {
   "name": "ytdlp-gui",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Lightweight, native-feeling Windows and macOS desktop app for yt-dlp",
   "author": "Aşkın Kadir Çekim",
   "license": "MIT",
