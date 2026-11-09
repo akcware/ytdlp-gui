@@ -56,8 +56,8 @@
 
 Get the latest installer from **[Releases](https://github.com/akcware/ytdlp-gui/releases/latest)**:
 
-- `yt-dlp GUI_x.y.z_x64-setup.exe`: recommended. It installs per user and needs no admin rights.
-- `yt-dlp GUI_x.y.z_x64_en-US.msi`: for managed or silent installs.
+- `yt-dlp-GUI_x.y.z_x64-setup.exe`: recommended. It installs per user and needs no admin rights.
+- `yt-dlp-GUI_x.y.z_x64_en-US.msi`: for managed or silent installs.
 
 You need Windows 10 or 11 (x64) with the Microsoft Edge WebView2 Runtime, which comes with Windows 11. The installers are not code-signed yet, so Windows SmartScreen may warn you. Choose **More info → Run anyway**.
 
