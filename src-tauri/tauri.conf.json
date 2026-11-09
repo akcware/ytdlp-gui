@@ -21,7 +21,10 @@
         "center": true,
         "visible": false,
         "transparent": true,
-        "dragDropEnabled": false
+        "dragDropEnabled": false,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "trafficLightPosition": { "x": 18, "y": 28 }
       }
     ],
     "security": {
@@ -37,7 +40,7 @@
     "homepage": "https://github.com/akcware/ytdlp-gui",
     "category": "Utility",
     "shortDescription": "Lightweight desktop app for yt-dlp",
-    "longDescription": "A small, native-feeling Windows app for downloading video and audio with yt-dlp.",
+    "longDescription": "A small, native-feeling Windows and macOS app for downloading video and audio with yt-dlp.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -45,6 +48,10 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "macOS": {
+      "minimumSystemVersion": "13.0",
+      "signingIdentity": "-"
+    },
     "windows": {
       "nsis": {
         "languages": [

@@ -1,8 +1,9 @@
 <!-- WinUI InfoBar: severity icon, title + message, optional action and close. -->
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import { GLYPHS } from "./Icon.svelte";
+  import Icon, { GLYPHS } from "./Icon.svelte";
   import { t } from "$lib/i18n.svelte";
+  import { isMac } from "$lib/platform";
 
   let {
     severity = "info",
@@ -25,7 +26,8 @@
 
 <div class="infobar {severity}" role={severity === "error" ? "alert" : "status"}>
   <span class="severity" aria-hidden="true">
-    {#if glyph}<span class="glyph">{glyph}</span>{:else}{severity === "info" ? "i" : "!"}{/if}
+    {#if glyph && isMac}<Icon name={severity === "success" ? "check" : "cancel"} size={10} />
+    {:else if glyph}<span class="glyph">{glyph}</span>{:else}{severity === "info" ? "i" : "!"}{/if}
   </span>
   <div class="content">
     <span class="body-strong">{title}</span>
@@ -34,7 +36,7 @@
   {#if action}<div class="action">{@render action()}</div>{/if}
   {#if onclose}
     <button class="btn subtle icon close" aria-label={t("close")} title={t("close")} onclick={onclose}>
-      <span class="glyph" style:font-size="12px">{GLYPHS.cancel}</span>
+      {#if isMac}<Icon name="cancel" size={12} />{:else}<span class="glyph" style:font-size="12px">{GLYPHS.cancel}</span>{/if}
     </button>
   {/if}
 </div>
@@ -114,5 +116,25 @@
       opacity: 0;
       transform: translateY(-4px);
     }
+  }
+
+  :global(.macos) .infobar {
+    gap: 10px;
+    min-height: 40px;
+    padding: 4px 4px 4px 12px;
+    border: 0;
+    border-radius: var(--radius-overlay);
+    box-shadow: inset 0 0 0 0.5px var(--stroke-card);
+  }
+  :global(.macos) .severity {
+    margin-top: 8px;
+    font-size: 11px;
+    color: #fff;
+  }
+  :global(.macos) .content {
+    padding: 7px 0;
+  }
+  :global(.macos) .close {
+    margin-top: 2px;
   }
 </style>

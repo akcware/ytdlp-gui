@@ -5,7 +5,8 @@
 <script lang="ts">
   import { tick } from "svelte";
   import { fallbackMenu, type MenuEntry } from "$lib/native.svelte";
-  import { GLYPHS } from "./Icon.svelte";
+  import { isMac } from "$lib/platform";
+  import Icon, { GLYPHS } from "./Icon.svelte";
 
   let el: HTMLDivElement | undefined = $state();
   let pos = $state({ x: 0, y: 0 });
@@ -74,7 +75,8 @@
           disabled={entry.enabled === false}
           onclick={() => run(entry)}
         >
-          {#if hasChecks}<span class="glyph check">{checked(entry) ? GLYPHS.check : ""}</span>{/if}
+          {#if hasChecks && isMac}<span class="check">{#if checked(entry)}<Icon name="check" size={12} />{/if}</span>
+          {:else if hasChecks}<span class="glyph check">{checked(entry) ? GLYPHS.check : ""}</span>{/if}
           {entry.text}
         </button>
       {/if}
@@ -131,6 +133,31 @@
     height: 1px;
     margin: 4px 0;
     background: var(--divider);
+  }
+  :global(.macos) .flyout {
+    padding: 5px;
+    border: 0;
+    -webkit-backdrop-filter: blur(24px) saturate(1.8);
+    backdrop-filter: blur(24px) saturate(1.8);
+  }
+  :global(.macos) button {
+    min-height: 22px;
+    margin: 0;
+    padding: 0 10px;
+    gap: 6px;
+    border-radius: 5px;
+  }
+  :global(.macos) button:hover:not(:disabled),
+  :global(.macos) button:focus-visible {
+    background: var(--accent);
+    color: #fff;
+  }
+  :global(.macos) .check {
+    display: inline-flex;
+    width: 12px;
+  }
+  :global(.macos) .separator {
+    margin: 5px 10px;
   }
   @keyframes open {
     from {

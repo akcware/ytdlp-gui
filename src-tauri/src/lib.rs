@@ -12,7 +12,7 @@ use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_window_state::StateFlags;
 
 /// Opens a downloaded file with its default app (double-click in the list),
-/// or a folder in Explorer.
+/// or a folder in Explorer / Finder.
 #[tauri::command]
 fn open_path(app: AppHandle, path: String) -> Result<(), String> {
     if !Path::new(&path).exists() {
@@ -45,7 +45,7 @@ pub fn run() {
                 .get_webview_window("main")
                 .expect("main window is defined in tauri.conf.json");
 
-            // Apply Mica + read the accent color off the main thread.
+            // Apply Mica/vibrancy + read the accent color off the main thread.
             let w = window.clone();
             thread::spawn(move || {
                 appearance::init(&w);

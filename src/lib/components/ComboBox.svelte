@@ -2,10 +2,13 @@
   WinUI ComboBox: button-like trigger with chevron and a flyout list where the
   selected item carries an accent pill. Keyboard: ↑/↓ change the selection
   while closed (like WinUI), Alt+↓ / Enter / Space open, Esc closes.
+  On macOS it looks like an AppKit pop-up button: ⌃⌄ indicator, a menu with a
+  checkmark on the selected item and an accent highlight.
 -->
 <script lang="ts" generics="T">
   import { tick } from "svelte";
-  import { GLYPHS } from "./Icon.svelte";
+  import { isMac } from "$lib/platform";
+  import Icon, { GLYPHS } from "./Icon.svelte";
 
   type Item = { value: T; label: string; detail?: string };
 
@@ -36,7 +39,7 @@
   async function show() {
     if (disabled || open) return;
     const r = trigger.getBoundingClientRect();
-    const height = Math.min(items.length * 36 + 8, 360);
+    const height = Math.min(items.length * (isMac ? 24 : 36) + 10, 360);
     const below = window.innerHeight - r.bottom;
     const above = below < height + 12 && r.top > below;
     pos = { left: r.left, top: above ? r.top - 4 : r.bottom + 4, width: r.width, above };
@@ -131,7 +134,11 @@
 >
   <span class="ellipsis">{selected?.label ?? ""}</span>
   {#if selected?.detail}<span class="caption text-2 detail">{selected.detail}</span>{/if}
-  <span class="glyph chevron">{GLYPHS.chevronDown}</span>
+  {#if isMac}
+    <span class="chevron"><Icon name="chevronUpDown" size={12} /></span>
+  {:else}
+    <span class="glyph chevron">{GLYPHS.chevronDown}</span>
+  {/if}
 </button>
 
 {#if open}
@@ -158,6 +165,7 @@
         onpointermove={() => (highlighted = i)}
         onclick={() => choose(i)}
       >
+        {#if isMac}<span class="mac-check">{#if i === selectedIndex}<Icon name="check" size={12} />{/if}</span>{/if}
         <span class="label">{item.label}</span>
         {#if item.detail}<span class="caption text-2">{item.detail}</span>{/if}
       </li>
@@ -235,6 +243,58 @@
     margin-top: -8px;
     border-radius: 2px;
     background: var(--accent);
+  }
+  /* ---- macOS pop-up button and menu ---- */
+  :global(.macos) .combo {
+    padding: 0 5px 0 10px;
+    gap: 6px;
+  }
+  :global(.macos) .chevron {
+    display: inline-flex;
+    padding-left: 2px;
+  }
+  :global(.macos) .popup {
+    padding: 5px;
+    border: 0;
+    -webkit-backdrop-filter: blur(24px) saturate(1.8);
+    backdrop-filter: blur(24px) saturate(1.8);
+    animation: fade 0.12s ease-out;
+  }
+  :global(.macos) li {
+    gap: 6px;
+    min-height: 24px;
+    margin: 0;
+    padding: 0 10px 0 6px;
+    border-radius: 5px;
+  }
+  :global(.macos) li .caption {
+    margin-left: auto;
+    padding-left: 16px;
+  }
+  :global(.macos) li.selected,
+  :global(.macos) li.selected.highlighted {
+    background: none;
+  }
+  :global(.macos) li.selected::before {
+    content: none;
+  }
+  :global(.macos) li.highlighted,
+  :global(.macos) li.selected.highlighted {
+    background: var(--accent);
+    color: #fff;
+  }
+  :global(.macos) li.highlighted .caption {
+    color: rgba(255, 255, 255, 0.8);
+  }
+  .mac-check {
+    display: inline-flex;
+    width: 12px;
+    flex-shrink: 0;
+  }
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
   }
   @keyframes drop {
     from {

@@ -2,6 +2,7 @@
 <script lang="ts">
   import { formatBytes } from "$lib/api";
   import { t } from "$lib/i18n.svelte";
+  import { isMac } from "$lib/platform";
   import { settings } from "$lib/state/settings.svelte";
   import { tools } from "$lib/state/tools.svelte";
   import Icon from "./Icon.svelte";
@@ -40,7 +41,7 @@
   <div class="hero">
     <img src="/icon.png" alt="" width="64" height="64" draggable="false" />
     <h1 class="title">{t("welcomeTitle")}</h1>
-    <p class="text-2">{t("welcomeBody")}</p>
+    <p class="text-2">{t(isMac ? "welcomeBodyMac" : "welcomeBody")}</p>
   </div>
 
   <div class="setting-group">
@@ -75,7 +76,7 @@
   {/if}
 
   <div class="footer">
-    <span class="caption text-3">{t("source")}</span>
+    <span class="caption text-3">{t(isMac ? "sourceMac" : "source")}</span>
     {#if finished && !error}
       <button class="btn accent wide" onclick={() => (active = false)}>{t("getStarted")}</button>
     {:else}
@@ -147,5 +148,16 @@
       opacity: 0;
       transform: translateY(12px);
     }
+  }
+
+  :global(.macos) .page {
+    padding-top: 56px;
+    gap: 14px;
+  }
+  :global(.macos) .hero {
+    gap: 6px;
+  }
+  :global(.macos) .wide {
+    min-height: 28px;
   }
 </style>

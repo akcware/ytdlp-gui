@@ -3,6 +3,7 @@
   import { open } from "@tauri-apps/plugin-dialog";
   import { formatBytes, formatDuration, hostOf, type VideoInfo } from "$lib/api";
   import { t, tp } from "$lib/i18n.svelte";
+  import { shortcut } from "$lib/platform";
   import { downloads } from "$lib/state/downloads.svelte";
   import { settings } from "$lib/state/settings.svelte";
   import { tools } from "$lib/state/tools.svelte";
@@ -150,7 +151,7 @@
 </div>
 
 <div class="actions">
-  <span class="caption text-3">Ctrl+Enter</span>
+  <span class="caption text-3">{shortcut("Enter")}</span>
   <button class="btn accent" onclick={download}>
     <Icon name="download" />
     {#if !info.isPlaylist}
@@ -249,5 +250,29 @@
       font-size: 16px;
       line-height: 22px;
     }
+  }
+
+  :global(.macos) .preview {
+    padding: 10px;
+    gap: 14px;
+  }
+  :global(.macos) .thumb {
+    border-radius: 6px;
+  }
+  :global(.macos) .duration {
+    border-radius: 4px;
+    font-weight: 500;
+  }
+  :global(.macos) .close {
+    top: 6px;
+    right: 6px;
+  }
+  :global(.macos) .actions {
+    margin-top: 14px;
+    gap: 10px;
+  }
+  :global(.macos) .actions .btn {
+    min-width: 110px;
+    min-height: 28px;
   }
 </style>

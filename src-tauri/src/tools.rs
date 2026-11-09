@@ -1,5 +1,6 @@
 //! Manages the yt-dlp and ffmpeg binaries in the app's local data folder
-//! (`%LOCALAPPDATA%\com.kadir.ytdlpgui\bin` on Windows).
+//! (`%LOCALAPPDATA%\com.kadir.ytdlpgui\bin` on Windows,
+//! `~/Library/Application Support/com.kadir.ytdlpgui/bin` on macOS).
 //!
 //! They are downloaded on first run instead of being bundled: the installer
 //! stays small and yt-dlp can update itself (`yt-dlp -U`) without a new app
@@ -29,6 +30,14 @@ const YTDLP_URL: &str = "https://github.com/yt-dlp/yt-dlp/releases/latest/downlo
 /// ffmpeg builds maintained by the yt-dlp team (static, includes ffprobe).
 #[cfg(windows)]
 const FFMPEG_URL: &str = "https://github.com/yt-dlp/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip";
+
+/// Static macOS builds by Martin Riedl, linked from ffmpeg.org's download page.
+/// Signed and notarized, one zip per program with the binary at its root.
+#[cfg(target_os = "macos")]
+fn macos_ffmpeg_url(program: &str) -> String {
+    let arch = if cfg!(target_arch = "aarch64") { "arm64" } else { "amd64" };
+    format!("https://ffmpeg.martin-riedl.de/redirect/latest/macos/{arch}/release/{program}.zip")
+}
 
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -103,6 +112,18 @@ fn status(app: &AppHandle) -> Result<ToolStatus, String> {
 /// macOS and most Linux distros), so the app needs no HTTP/TLS crates.
 /// Emits `tool-progress` events with the number of bytes received so far.
 fn download_file(app: &AppHandle, url: &str, dest: &Path, tool: &str) -> Result<(), String> {
+    download_file_after(app, url, dest, tool, 0).map(|_| ())
+}
+
+/// Like `download_file`, but reports `already` bytes on top (when one tool is
+/// made of several downloads). Returns the size of the downloaded file.
+fn download_file_after(
+    app: &AppHandle,
+    url: &str,
+    dest: &Path,
+    tool: &str,
+    already: u64,
+) -> Result<u64, String> {
     let part = dest.with_extension("part");
     let _ = fs::remove_file(&part);
 
@@ -133,13 +154,15 @@ fn download_file(app: &AppHandle, url: &str, dest: &Path, tool: &str) -> Result<
             ToolProgress {
                 tool: tool.to_string(),
                 phase: "download",
-                bytes,
+                bytes: already + bytes,
             },
         );
         thread::sleep(Duration::from_millis(250));
     }
 
-    fs::rename(&part, dest).map_err(|e| format!("Couldn't save {tool}: {e}"))
+    let size = fs::metadata(&part).map(|m| m.len()).unwrap_or(0);
+    fs::rename(&part, dest).map_err(|e| format!("Couldn't save {tool}: {e}"))?;
+    Ok(size)
 }
 
 #[cfg(unix)]
@@ -240,8 +263,70 @@ pub async fn install_ffmpeg(app: AppHandle) -> Result<ToolStatus, String> {
     .await
 }
 
-#[cfg(not(windows))]
+#[cfg(target_os = "macos")]
+#[tauri::command]
+pub async fn install_ffmpeg(app: AppHandle) -> Result<ToolStatus, String> {
+    blocking(move || {
+        let bin = bin_dir(&app)?;
+        let tmp = bin.join("ffmpeg-extract");
+        let _ = fs::remove_dir_all(&tmp);
+        fs::create_dir_all(&tmp).map_err(|e| e.to_string())?;
+
+        // Both archives first: a half-finished install must not look installed.
+        let programs = ["ffprobe", "ffmpeg"];
+        let mut received = 0;
+        for program in programs {
+            let zip = tmp.join(format!("{program}.zip"));
+            received +=
+                download_file_after(&app, &macos_ffmpeg_url(program), &zip, "ffmpeg", received)?;
+        }
+        let _ = app.emit(
+            "tool-progress",
+            ToolProgress {
+                tool: "ffmpeg".into(),
+                phase: "extract",
+                bytes: 0,
+            },
+        );
+
+        // macOS ships bsdtar, which extracts zip files.
+        for program in programs {
+            let out = hidden_command("/usr/bin/tar")
+                .arg("-xf")
+                .arg(tmp.join(format!("{program}.zip")))
+                .arg("-C")
+                .arg(&tmp)
+                .output()
+                .map_err(|e| format!("Couldn't start tar: {e}"))?;
+            if !out.status.success() {
+                let _ = fs::remove_dir_all(&tmp);
+                return Err(format!(
+                    "Couldn't extract the {program} archive: {}",
+                    String::from_utf8_lossy(&out.stderr).trim()
+                ));
+            }
+        }
+
+        // ffmpeg last: its presence is what marks the install as done.
+        for program in programs {
+            let from = tmp.join(program);
+            if !from.exists() {
+                let _ = fs::remove_dir_all(&tmp);
+                return Err(format!("{program} was not found in the archive"));
+            }
+            let to = bin.join(program);
+            make_executable(&from)?;
+            fs::rename(&from, &to).map_err(|e| format!("Couldn't move {program}: {e}"))?;
+        }
+
+        let _ = fs::remove_dir_all(&tmp);
+        status(&app)
+    })
+    .await
+}
+
+#[cfg(all(unix, not(target_os = "macos")))]
 #[tauri::command]
 pub async fn install_ffmpeg(_app: AppHandle) -> Result<ToolStatus, String> {
-    Err("Install ffmpeg with your package manager on this platform (e.g. brew install ffmpeg).".into())
+    Err("Install ffmpeg with your package manager on this platform (e.g. apt install ffmpeg).".into())
 }

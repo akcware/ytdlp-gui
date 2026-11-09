@@ -6,8 +6,17 @@
 import { mockIPC, mockWindows } from "@tauri-apps/api/mocks";
 import { emit } from "@tauri-apps/api/event";
 import type { DownloadEvent, ToolStatus, VideoInfo } from "./api";
+import { isMac } from "./platform";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// Paths in the style of the platform being previewed (see ?platform=).
+const DOWNLOADS = isMac ? "/Users/demo/Downloads" : "C:\\Users\\demo\\Downloads";
+const BIN_DIR = isMac
+  ? "/Users/demo/Library/Application Support/com.kadir.ytdlpgui/bin"
+  : "C:\\Users\\demo\\AppData\\Local\\com.kadir.ytdlpgui\\bin";
+const PICKED_DIR = isMac ? "/Users/demo/Movies" : "D:\\Videolar";
+const SEP = isMac ? "/" : "\\";
 
 const THUMB =
   "data:image/svg+xml," +
@@ -27,7 +36,7 @@ export function installMocks() {
   const status = (): ToolStatus => ({
     ytdlpVersion,
     ffmpeg,
-    binDir: "C:\\Users\\demo\\AppData\\Local\\com.kadir.ytdlpgui\\bin",
+    binDir: BIN_DIR,
   });
 
   const send = (e: DownloadEvent) => emit("download-event", e);
@@ -86,7 +95,7 @@ export function installMocks() {
           timers.delete(id);
           send({ kind: "postprocess", id, status: "started", processor: mode === "video" ? "Merger" : "ExtractAudio" });
           setTimeout(() => {
-            send({ kind: "file", id, path: "C:\\Users\\demo\\Downloads\\Sunset over the mountains [abc123].mp4" });
+            send({ kind: "file", id, path: `${DOWNLOADS}${SEP}Sunset over the mountains [abc123].mp4` });
             send({ kind: "done", id, ok: true, cancelled: false, error: null });
           }, 1400);
         }
@@ -158,9 +167,9 @@ export function installMocks() {
           console.info("[mock] open", a.path);
           return null;
         case "plugin:path|resolve_directory":
-          return "C:\\Users\\demo\\Downloads";
+          return DOWNLOADS;
         case "plugin:dialog|open":
-          return "D:\\Videolar";
+          return PICKED_DIR;
         case "plugin:dialog|ask":
         case "plugin:dialog|confirm":
           return window.confirm(String(a.message));

@@ -4,7 +4,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { i18n, t } from "./i18n.svelte";
 
 export type Appearance = {
-  backdrop: "mica" | "none";
+  backdrop: "mica" | "vibrancy" | "none";
   accent: {
     light3: string;
     light2: string;
@@ -77,7 +77,7 @@ export const api = {
   fetchInfo: (url: string) => invoke<VideoInfo>("fetch_info", { url }),
   startDownload: (request: DownloadRequest) => invoke<number>("start_download", { request }),
   cancelDownload: (id: number) => invoke<void>("cancel_download", { id }),
-  /** Opens a file with its default app, or a folder in Explorer. */
+  /** Opens a file with its default app, or a folder in Explorer / Finder. */
   openPath: (path: string) => invoke<void>("open_path", { path }),
 };
 

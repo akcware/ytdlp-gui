@@ -82,4 +82,33 @@
     border-radius: 2px;
     background: var(--accent);
   }
+
+  /* macOS segmented control: a raised white segment on a recessed track */
+  :global(.macos) .segmented {
+    gap: 0;
+    padding: 1px;
+    border: 0;
+    border-radius: 7px;
+    background: var(--fill-alt);
+    box-shadow: inset 0 0 0 0.5px var(--stroke-card);
+  }
+  :global(.macos) button {
+    gap: 5px;
+    min-height: 22px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 6px;
+    color: var(--text-1);
+  }
+  :global(.macos) button:hover:not(.active),
+  :global(.macos) button:active:not(.active) {
+    background: transparent;
+  }
+  :global(.macos) button.active {
+    background: var(--fill-control);
+    box-shadow: var(--shadow-button);
+  }
+  :global(.macos) button.active::after {
+    content: none;
+  }
 </style>

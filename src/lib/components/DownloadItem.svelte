@@ -10,6 +10,7 @@
   } from "$lib/api";
   import { i18n, t } from "$lib/i18n.svelte";
   import { belowElement, showMenu, writeClipboard, type MenuEntry } from "$lib/native.svelte";
+  import { isMac } from "$lib/platform";
   import { downloads, isActive, type Job } from "$lib/state/downloads.svelte";
   import Icon from "./Icon.svelte";
   import ProgressBar from "./ProgressBar.svelte";
@@ -18,6 +19,7 @@
 
   let moreButton: HTMLButtonElement;
   const active = $derived(isActive(job));
+  const revealLabel = $derived(t(isMac ? "showInFinder" : "showInFolder"));
   const playlistProgress = $derived(
     job.request.playlist && job.playlistIndex ? `${job.playlistIndex}/${job.playlistCount ?? "?"}` : null,
   );
@@ -97,7 +99,7 @@
   function entries(): MenuEntry[] {
     const list: MenuEntry[] = [];
     if (job.state === "done" && job.file) {
-      list.push({ text: t("open"), action: open }, { text: t("showInFolder"), action: reveal }, "separator");
+      list.push({ text: t("open"), action: open }, { text: revealLabel, action: reveal }, "separator");
     }
     list.push(
       { text: t("copyLink"), action: () => writeClipboard(job.request.url) },
@@ -126,7 +128,8 @@
   function onkeydown(e: KeyboardEvent) {
     if (e.target !== e.currentTarget) return;
     if (e.key === "Enter") open();
-    else if (e.key === "Delete" && !active) downloads.remove(job);
+    // The Mac "delete" key is Backspace (⌫, or ⌘⌫ like in Finder).
+    else if ((e.key === "Delete" || (isMac && e.key === "Backspace")) && !active) downloads.remove(job);
     else if (e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey)) {
       e.preventDefault();
       const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -188,7 +191,7 @@
         <button class="btn subtle icon" title={t("open")} aria-label={t("openFile")} onclick={open}>
           <Icon name="openFile" />
         </button>
-        <button class="btn subtle icon" title={t("showInFolder")} aria-label={t("showInFolder")} onclick={reveal}>
+        <button class="btn subtle icon" title={revealLabel} aria-label={revealLabel} onclick={reveal}>
           <Icon name="folderOpen" />
         </button>
       {:else}
@@ -311,5 +314,43 @@
       opacity: 0;
       transform: translateY(-6px);
     }
+  }
+
+  /* macOS: rows of one grouped list (the box is drawn by the page) */
+  :global(.macos) .item {
+    gap: 12px;
+    min-height: 60px;
+    padding: 9px 8px 9px 12px;
+    background: none;
+    border: 0;
+    border-radius: 0;
+  }
+  :global(.macos) .item:not(:first-child) {
+    background: linear-gradient(var(--divider), var(--divider)) no-repeat 96px 0 / calc(100% - 108px) 1px;
+  }
+  :global(.macos) .item:hover {
+    background-color: transparent;
+  }
+  :global(.macos) .item:first-child {
+    border-radius: var(--radius-overlay) var(--radius-overlay) 0 0;
+  }
+  :global(.macos) .item:last-child {
+    border-radius: 0 0 var(--radius-overlay) var(--radius-overlay);
+  }
+  :global(.macos) .item:only-child {
+    border-radius: var(--radius-overlay);
+  }
+  :global(.macos) .item:focus-visible {
+    outline-offset: -3px;
+  }
+  :global(.macos) .thumb,
+  :global(.macos) .thumb img {
+    border-radius: 5px;
+  }
+  :global(.macos) .badge {
+    box-shadow: 0 0 0 2px var(--bg-solid);
+  }
+  :global(.macos) .bar {
+    margin-top: 6px;
   }
 </style>

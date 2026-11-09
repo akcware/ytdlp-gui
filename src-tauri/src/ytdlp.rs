@@ -13,7 +13,7 @@ use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, State};
 
-use crate::process::{blocking, hidden_command, kill_tree};
+use crate::process::{blocking, hidden_command, kill_tree, own_process_group};
 use crate::tools::{ffmpeg_available, local_ffmpeg, ytdlp_path};
 
 // ---------------------------------------------------------------------------
@@ -369,6 +369,8 @@ pub fn start_download(
     request: DownloadRequest,
 ) -> Result<u32, String> {
     let mut args = build_args(&request, ffmpeg_available(&app))?;
+    // Our own copy isn't on PATH. A system ffmpeg is found by yt-dlp itself
+    // (on macOS through the Homebrew folders added in `hidden_command`).
     if let Some(ffmpeg) = local_ffmpeg(&app) {
         args.push("--ffmpeg-location".into());
         args.push(ffmpeg.to_string_lossy().into_owned());
@@ -376,7 +378,7 @@ pub fn start_download(
     args.push("--".into());
     args.push(request.url.clone());
 
-    let mut child = hidden_command(ytdlp_path(&app)?)
+    let mut child = own_process_group(&mut hidden_command(ytdlp_path(&app)?))
         .args(&args)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())

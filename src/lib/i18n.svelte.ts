@@ -11,7 +11,7 @@ type PluralBase = { [K in Key]: K extends `${infer B}_one` ? B : never }[Key];
 const dictionaries: Record<Locale, Record<Key, string>> = { en, tr };
 const STORAGE_KEY = "language";
 
-/** Windows display language, as reported by WebView2. */
+/** The system display language, as reported by the webview (WebView2 / WKWebView). */
 function systemLocale(): Locale {
   const lang = typeof navigator === "undefined" ? "" : (navigator.languages?.[0] ?? navigator.language);
   return lang?.toLowerCase().startsWith("tr") ? "tr" : "en";

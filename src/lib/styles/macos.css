@@ -1,0 +1,355 @@
+/*
+ * macOS look. Loaded after fluent.css and active only when <html> has the
+ * `macos` class (see $lib/platform.ts): it remaps the same design tokens to
+ * AppKit's colors and metrics (SF Pro 13pt, system accent color, grouped
+ * forms, push buttons, focus rings) so every component follows along.
+ * Component-specific tweaks live next to each component as `:global(.macos)`.
+ */
+
+:root.macos {
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+  --font-small: var(--font);
+
+  --ease-out: cubic-bezier(0.2, 0.9, 0.3, 1);
+  --radius-control: 6px;
+  --radius-overlay: 10px;
+  /* Room for the traffic lights in the unified toolbar: they end at 78px
+     (trafficLightPosition x 18 + 3 buttons), plus a 14px gap. */
+  --titlebar-inset: 92px;
+
+  /* light appearance (NSColor semantic colors) */
+  --accent: #007aff;
+  --accent-text: var(--accent);
+  --accent-disabled: rgba(0, 0, 0, 0.05);
+  --text-1: rgba(0, 0, 0, 0.85);
+  --text-2: rgba(0, 0, 0, 0.5);
+  --text-3: rgba(0, 0, 0, 0.3);
+  --text-disabled: rgba(0, 0, 0, 0.25);
+  --text-on-accent: #ffffff;
+  --text-on-accent-disabled: rgba(0, 0, 0, 0.25);
+  --text-inverse: #ffffff;
+
+  --fill-control: #ffffff;
+  --fill-control-hover: #ffffff;
+  --fill-control-pressed: #e9e9e9;
+  --fill-control-disabled: rgba(255, 255, 255, 0.5);
+  --fill-input: #ffffff;
+  --fill-input-active: #ffffff;
+  --fill-subtle-hover: rgba(0, 0, 0, 0.05);
+  --fill-subtle-pressed: rgba(0, 0, 0, 0.1);
+  --fill-strong: rgba(0, 0, 0, 0.5);
+  --fill-alt: rgba(0, 0, 0, 0.05);
+  --fill-track: rgba(0, 0, 0, 0.09);
+
+  --stroke-control: rgba(0, 0, 0, 0.12);
+  --stroke-control-2: rgba(0, 0, 0, 0.12);
+  --stroke-strong: rgba(0, 0, 0, 0.15);
+  --stroke-card: rgba(0, 0, 0, 0.07);
+  --stroke-field: rgba(0, 0, 0, 0.14);
+  --divider: rgba(0, 0, 0, 0.09);
+
+  --fill-card: rgba(255, 255, 255, 0.62);
+  --fill-card-2: rgba(255, 255, 255, 0.8);
+  --bg-solid: #ececec;
+  --flyout: rgba(246, 246, 246, 0.95);
+  --flyout-stroke: rgba(0, 0, 0, 0.1);
+  --shadow-flyout: 0 0 0 0.5px rgba(0, 0, 0, 0.12), 0 10px 30px rgba(0, 0, 0, 0.18);
+  --shadow-card: none;
+  --shadow-button: 0 0 0 0.5px rgba(0, 0, 0, 0.12), 0 0.5px 1.5px rgba(0, 0, 0, 0.14);
+  --smoke: rgba(0, 0, 0, 0.18);
+
+  --critical: #ff3b30;
+  --critical-bg: rgba(255, 59, 48, 0.1);
+  --caution: #ff9500;
+  --caution-bg: rgba(255, 149, 0, 0.13);
+  --success: #28cd41;
+  --success-bg: rgba(40, 205, 65, 0.12);
+  --attention-bg: color-mix(in srgb, var(--accent) 9%, transparent);
+
+  --focus-ring: color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root.macos {
+    --accent: #0a84ff;
+    --accent-disabled: rgba(255, 255, 255, 0.08);
+    --text-1: rgba(255, 255, 255, 0.86);
+    --text-2: rgba(255, 255, 255, 0.55);
+    --text-3: rgba(255, 255, 255, 0.3);
+    --text-disabled: rgba(255, 255, 255, 0.25);
+    --text-on-accent: #ffffff;
+    --text-on-accent-disabled: rgba(255, 255, 255, 0.25);
+    --text-inverse: #ffffff;
+
+    --fill-control: rgba(255, 255, 255, 0.2);
+    --fill-control-hover: rgba(255, 255, 255, 0.2);
+    --fill-control-pressed: rgba(255, 255, 255, 0.3);
+    --fill-control-disabled: rgba(255, 255, 255, 0.08);
+    --fill-input: rgba(255, 255, 255, 0.07);
+    --fill-input-active: rgba(255, 255, 255, 0.07);
+    --fill-subtle-hover: rgba(255, 255, 255, 0.08);
+    --fill-subtle-pressed: rgba(255, 255, 255, 0.14);
+    --fill-strong: rgba(255, 255, 255, 0.5);
+    --fill-alt: rgba(255, 255, 255, 0.07);
+    --fill-track: rgba(255, 255, 255, 0.12);
+
+    --stroke-control: rgba(255, 255, 255, 0.1);
+    --stroke-control-2: rgba(255, 255, 255, 0.1);
+    --stroke-strong: rgba(255, 255, 255, 0.18);
+    --stroke-card: rgba(255, 255, 255, 0.07);
+    --stroke-field: rgba(255, 255, 255, 0.12);
+    --divider: rgba(255, 255, 255, 0.09);
+
+    --fill-card: rgba(255, 255, 255, 0.055);
+    --fill-card-2: rgba(255, 255, 255, 0.09);
+    --bg-solid: #232323;
+    --flyout: rgba(40, 40, 40, 0.94);
+    --flyout-stroke: rgba(255, 255, 255, 0.12);
+    --shadow-flyout: 0 0 0 0.5px rgba(0, 0, 0, 0.5), inset 0 0 0 0.5px rgba(255, 255, 255, 0.12),
+      0 10px 30px rgba(0, 0, 0, 0.35);
+    --shadow-button: 0 0 0 0.5px rgba(0, 0, 0, 0.25), inset 0 0.5px 0 rgba(255, 255, 255, 0.08);
+    --smoke: rgba(0, 0, 0, 0.3);
+
+    --critical: #ff453a;
+    --critical-bg: rgba(255, 69, 58, 0.16);
+    --caution: #ff9f0a;
+    --caution-bg: rgba(255, 159, 10, 0.16);
+    --success: #32d74b;
+    --success-bg: rgba(50, 215, 75, 0.14);
+  }
+}
+
+/* The user's accent color from System Settings, kept live by WebKit. */
+@supports (color: -apple-system-control-accent) {
+  :root.macos {
+    --accent: -apple-system-control-accent;
+  }
+}
+
+/* ---------------------------------------------------------------- base */
+
+:root.macos body {
+  font: 400 13px/16px var(--font);
+}
+:root.macos :focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 0;
+}
+
+/* type ramp: macOS text styles */
+:root.macos .caption {
+  font: 400 11px/14px var(--font);
+}
+:root.macos .subtitle {
+  font: 600 17px/22px var(--font-display);
+  letter-spacing: -0.01em;
+}
+:root.macos .title {
+  font: 700 26px/32px var(--font-display);
+  letter-spacing: -0.015em;
+}
+
+/* Window drag area above content that has no toolbar (first run, splash). */
+:root.macos .titlebar-drag {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 52px;
+  z-index: 1;
+}
+
+/* ------------------------------------------------------------- buttons */
+
+/* Push button */
+:root.macos .btn {
+  min-height: 24px;
+  padding: 0 10px;
+  gap: 6px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--fill-control);
+  box-shadow: var(--shadow-button);
+}
+:root.macos .btn:hover {
+  background-color: var(--fill-control-hover);
+}
+:root.macos .btn:active {
+  background-color: var(--fill-control-pressed);
+  color: var(--text-1);
+}
+:root.macos .btn:disabled {
+  background-color: var(--fill-control-disabled);
+  color: var(--text-disabled);
+  box-shadow: 0 0 0 0.5px var(--stroke-control);
+}
+:root.macos .btn .glyph {
+  font-size: 14px;
+}
+
+/* Default button: accent fill with the subtle top sheen AppKit draws. */
+:root.macos .btn.accent {
+  background-color: var(--accent);
+  background-image: linear-gradient(rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0));
+  color: var(--text-on-accent);
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.08),
+    0 0.5px 1.5px rgba(0, 0, 0, 0.18);
+}
+:root.macos .btn.accent:hover {
+  background-color: var(--accent);
+}
+:root.macos .btn.accent:active {
+  background-color: var(--accent);
+  background-image: linear-gradient(rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.16));
+  color: var(--text-on-accent);
+}
+:root.macos .btn.accent:disabled {
+  background: var(--accent-disabled);
+  color: var(--text-on-accent-disabled);
+  box-shadow: 0 0 0 0.5px var(--stroke-control);
+}
+
+/* Borderless toolbar / inline button */
+:root.macos .btn.subtle {
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-2);
+}
+:root.macos .btn.subtle:hover {
+  background: var(--fill-subtle-hover);
+  color: var(--text-1);
+}
+:root.macos .btn.subtle:active {
+  background: var(--fill-subtle-pressed);
+  color: var(--text-1);
+}
+:root.macos .btn.subtle:disabled {
+  background: transparent;
+  color: var(--text-disabled);
+}
+:root.macos .btn.icon {
+  width: 28px;
+  min-height: 28px;
+  padding: 0;
+}
+:root.macos .btn.small {
+  min-height: 22px;
+  padding: 0 8px;
+}
+:root.macos .btn.small.icon {
+  width: 22px;
+  min-height: 22px;
+}
+
+:root.macos .link {
+  padding: 2px 4px;
+  color: var(--accent-text);
+  cursor: default;
+}
+:root.macos .link:hover {
+  background: none;
+  text-decoration: underline;
+}
+:root.macos .link:active {
+  background: none;
+  opacity: 0.7;
+}
+
+/* ------------------------------------------------------------- textbox */
+
+:root.macos .textbox {
+  min-height: 24px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--fill-input);
+  box-shadow: inset 0 0 0 0.5px var(--stroke-field), inset 0 0.5px 1px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.15s;
+}
+:root.macos .textbox:hover {
+  background: var(--fill-input);
+}
+:root.macos .textbox:focus-within {
+  background: var(--fill-input-active);
+  box-shadow:
+    inset 0 0 0 0.5px color-mix(in srgb, var(--accent) 70%, transparent),
+    0 0 0 3px var(--focus-ring);
+}
+:root.macos .textbox:focus-within::after {
+  content: none;
+}
+:root.macos .textbox input {
+  padding: 3px 8px;
+}
+/* The ring goes around the whole field, not the bare input inside it. */
+:root.macos .textbox input:focus-visible {
+  outline: none;
+}
+:root.macos .textbox input::placeholder {
+  color: var(--text-3);
+}
+:root.macos .textbox > .glyph {
+  margin-left: 8px;
+  color: var(--text-2);
+}
+:root.macos .textbox .btn.subtle.icon {
+  width: 22px;
+  min-height: 20px;
+  margin-right: 3px;
+  border-radius: 5px;
+}
+
+/* ------------------------------------------------------------ checkbox */
+
+/* AppKit draws the real checkbox, in the accent color. WebKit only does that
+   for a control without author borders or backgrounds, so drop fluent.css's
+   styles entirely instead of overriding them. */
+:root.macos .checkbox {
+  gap: 6px;
+  min-height: 24px;
+}
+:root.macos .checkbox input {
+  all: revert;
+  margin: 0;
+}
+:root.macos .checkbox input::after {
+  content: none;
+}
+
+/* ------------------------------------------------- grouped form (cards) */
+
+:root.macos .card {
+  border: 0;
+  box-shadow: inset 0 0 0 0.5px var(--stroke-card);
+}
+
+/* System Settings–style grouped rows: one rounded box, inset separators. */
+:root.macos .setting-group {
+  gap: 0;
+  border-radius: var(--radius-overlay);
+  background: var(--fill-card);
+  box-shadow: inset 0 0 0 0.5px var(--stroke-card);
+}
+:root.macos .setting {
+  gap: 12px;
+  min-height: 52px;
+  padding: 10px 14px;
+  background: none;
+  border: 0;
+  border-radius: 0;
+}
+:root.macos .setting + .setting {
+  background: linear-gradient(var(--divider), var(--divider)) no-repeat 14px 0 / calc(100% - 28px) 1px;
+}
+:root.macos .setting > .glyph {
+  width: 20px;
+  color: var(--text-2);
+}
+:root.macos .setting .setting-text {
+  gap: 1px;
+}
+:root.macos .group-header {
+  font-weight: 600;
+  margin: 18px 0 6px 2px;
+}

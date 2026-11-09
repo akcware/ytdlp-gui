@@ -1,9 +1,11 @@
-//! Windows 11 look: Mica window backdrop and the user's accent color.
+//! Native window material and the user's accent color.
 //!
 //! The window is created transparent and hidden (see tauri.conf.json). On
-//! Windows 11 we apply Mica; the frontend asks for the result before showing
-//! the window, so it can drop its solid background only when Mica is really
-//! behind it (Windows 10 keeps the solid Fluent background).
+//! Windows 11 we apply Mica, on macOS the "under window" vibrancy material.
+//! The frontend asks for the result before showing the window, so it can drop
+//! its solid background only when a material is really behind it (Windows 10
+//! keeps the solid Fluent background). On macOS the accent color comes from
+//! WebKit's `-apple-system-control-accent`, so it isn't read here.
 
 use std::sync::OnceLock;
 
@@ -16,7 +18,8 @@ use crate::process::blocking;
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Appearance {
-    /// "mica" when the Mica backdrop was applied, otherwise "none".
+    /// "mica" (Windows 11) or "vibrancy" (macOS) when a material was applied,
+    /// otherwise "none".
     backdrop: &'static str,
     accent: Accent,
 }
@@ -56,16 +59,35 @@ static APPEARANCE: OnceLock<Appearance> = OnceLock::new();
 /// background thread at startup and from the `appearance` command, whichever
 /// comes first.
 pub fn init(window: &WebviewWindow) -> &'static Appearance {
-    APPEARANCE.get_or_init(|| {
-        let mica = is_windows_11()
-            && window
-                .set_effects(EffectsBuilder::new().effect(Effect::Mica).build())
-                .is_ok();
-        Appearance {
-            backdrop: if mica { "mica" } else { "none" },
-            accent: read_accent().unwrap_or_default(),
-        }
+    APPEARANCE.get_or_init(|| Appearance {
+        backdrop: apply_backdrop(window),
+        accent: read_accent().unwrap_or_default(),
     })
+}
+
+#[cfg(not(target_os = "macos"))]
+fn apply_backdrop(window: &WebviewWindow) -> &'static str {
+    let mica = is_windows_11()
+        && window
+            .set_effects(EffectsBuilder::new().effect(Effect::Mica).build())
+            .is_ok();
+    if mica { "mica" } else { "none" }
+}
+
+/// The material behind Finder and System Settings windows: a soft tint of the
+/// desktop that turns flat when the window is inactive, like Mica does.
+#[cfg(target_os = "macos")]
+fn apply_backdrop(window: &WebviewWindow) -> &'static str {
+    use tauri::window::EffectState;
+    let effects = EffectsBuilder::new()
+        .effect(Effect::UnderWindowBackground)
+        .state(EffectState::FollowsWindowActiveState)
+        .build();
+    if window.set_effects(effects).is_ok() {
+        "vibrancy"
+    } else {
+        "none"
+    }
 }
 
 #[tauri::command]
@@ -101,7 +123,7 @@ fn is_windows_11() -> bool {
     .is_some_and(|build| build >= 22000)
 }
 
-#[cfg(not(windows))]
+#[cfg(all(not(windows), not(target_os = "macos")))]
 fn is_windows_11() -> bool {
     false
 }

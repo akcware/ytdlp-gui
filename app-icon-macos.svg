@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- macOS variant of app-icon.svg (only used for icon.icns): the artwork
+       scaled onto Apple's icon grid (824×824 body, 100px margin) with the
+       standard drop shadow, so it sits right next to other Dock icons. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4f8dff"/>
+      <stop offset="1" stop-color="#6a3cf0"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.24"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.18"/>
+    </linearGradient>
+  
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000000" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+  <g filter="url(#shadow)" transform="translate(100 100) scale(0.936364) translate(-72 -72)">
+  <rect x="72" y="72" width="880" height="880" rx="196" fill="url(#bg)"/>
+  <rect x="72" y="72" width="880" height="880" rx="196" fill="url(#shine)"/>
+  <rect x="76" y="76" width="872" height="872" rx="192" fill="none" stroke="url(#edge)" stroke-width="8"/>
+  <g fill="none" stroke="#ffffff" stroke-width="92" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M512 232 V612"/>
+    <path d="M336 446 L512 622 L688 446"/>
+    <path d="M300 790 H724" opacity="0.92"/>
+  </g>
+  </g>
+</svg>

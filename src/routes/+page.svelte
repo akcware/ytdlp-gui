@@ -9,10 +9,12 @@
     belowElement,
     notify,
     readClipboard,
+    setAppMenu,
     setTaskbarProgress,
     showMenu,
     type MenuEntry,
   } from "$lib/native.svelte";
+  import { isMac, shortcut } from "$lib/platform";
   import { downloads } from "$lib/state/downloads.svelte";
   import { settings } from "$lib/state/settings.svelte";
   import { tools } from "$lib/state/tools.svelte";
@@ -79,7 +81,7 @@
     };
   });
 
-  // Overall progress on the taskbar button.
+  // Overall progress on the taskbar button (Dock icon on macOS).
   $effect(() => {
     const active = downloads.active;
     if (!active.length) return setTaskbarProgress("none");
@@ -283,6 +285,74 @@
     showMenu(entries, { x: at.x + moreButton.offsetWidth - 220, y: at.y });
   }
 
+  /** ⌘Q asks about running downloads, just like closing the window. */
+  function quit() {
+    getCurrentWindow()
+      .close()
+      .catch(() => {});
+  }
+
+  // macOS menu bar, in the app's language. Rebuilt when the language or an
+  // item's enabled state changes (both are read reactively here).
+  $effect(() => {
+    if (!isMac) return;
+    const s = tools.status;
+    const busy = !!tools.busy;
+    const appItems: MenuEntry[] = [
+      { text: t("updateYtdlp"), action: updateYtdlp, enabled: tools.ready && !busy },
+    ];
+    if (s && !s.ffmpeg) appItems.push({ text: t("downloadFfmpeg"), action: installFfmpeg, enabled: !busy });
+    setAppMenu([
+      {
+        text: "yt-dlp GUI",
+        items: [
+          { text: t("menuAbout"), action: about },
+          "separator",
+          ...appItems,
+          "separator",
+          { predefined: "Services", text: t("menuServices") },
+          "separator",
+          { predefined: "Hide", text: t("menuHide") },
+          { predefined: "HideOthers", text: t("menuHideOthers") },
+          { predefined: "ShowAll", text: t("menuShowAll") },
+          "separator",
+          { text: t("menuQuit"), action: quit, accelerator: "CmdOrCtrl+Q" },
+        ],
+      },
+      {
+        text: t("menuFile"),
+        items: [
+          { text: t("openDownloadFolder"), action: () => openFolder(settings.outDir) },
+          { text: t("openComponentFolder"), action: () => openFolder(tools.status?.binDir) },
+          "separator",
+          { predefined: "CloseWindow", text: t("menuCloseWindow") },
+        ],
+      },
+      {
+        text: t("menuEdit"),
+        items: [
+          { predefined: "Undo", text: t("menuUndo") },
+          { predefined: "Redo", text: t("menuRedo") },
+          "separator",
+          { predefined: "Cut", text: t("menuCut") },
+          { predefined: "Copy", text: t("menuCopy") },
+          { predefined: "Paste", text: t("menuPaste") },
+          { predefined: "SelectAll", text: t("menuSelectAll") },
+        ],
+      },
+      {
+        text: t("menuWindow"),
+        windows: true,
+        items: [
+          { predefined: "Minimize", text: t("menuMinimize") },
+          { predefined: "Maximize", text: t("menuZoom") },
+          "separator",
+          { predefined: "BringAllToFront", text: t("menuBringAllToFront") },
+        ],
+      },
+    ]);
+  });
+
   /** Language choices, each shown in its own language. */
   function languageEntries(): MenuEntry[] {
     const choice = (p: LanguagePreference, text: string): MenuEntry => ({
@@ -309,7 +379,8 @@
   </main>
 {:else}
   <div class="shell">
-    <header class="commandbar" class:scrolled>
+    <!-- On macOS this is the unified toolbar: the window is dragged by it. -->
+    <header class="commandbar" class:scrolled data-tauri-drag-region={isMac ? "" : undefined}>
       <div class="textbox url">
         <Icon name="link" />
         <input
@@ -329,7 +400,12 @@
             <Icon name="cancel" size={12} />
           </button>
         {:else}
-          <button class="btn subtle icon" title={t("pasteShortcut")} aria-label={t("paste")} onclick={pasteAndFetch}>
+          <button
+            class="btn subtle icon"
+            title={t("pasteShortcut", { keys: shortcut("V") })}
+            aria-label={t("paste")}
+            onclick={pasteAndFetch}
+          >
             <Icon name="paste" size={14} />
           </button>
         {/if}
@@ -413,7 +489,7 @@
             <div class="subtitle">{t("emptyTitle")}</div>
             <p class="text-2">
               {t("emptyBefore")}
-              <kbd>Ctrl</kbd>+<kbd>V</kbd>
+              {#if isMac}<kbd>⌘V</kbd>{:else}<kbd>Ctrl</kbd>+<kbd>V</kbd>{/if}
               {t("emptyAfter")}
             </p>
             <button class="btn" onclick={pasteAndFetch}><Icon name="paste" />{t("pasteFromClipboard")}</button>
@@ -651,6 +727,73 @@
     .skeleton .thumb {
       width: 136px;
     }
+  }
+
+  /* ---- macOS: unified toolbar next to the traffic lights, grouped list ---- */
+  :global(.macos) .commandbar {
+    min-height: 52px;
+    box-sizing: border-box;
+    padding: 0 12px 0 var(--titlebar-inset);
+    gap: 6px;
+  }
+  :global(.macos.fullscreen) .commandbar {
+    padding-left: 12px;
+  }
+  :global(.macos) .url {
+    min-height: 28px;
+    border-radius: 8px;
+  }
+  :global(.macos) .fetch {
+    min-width: 64px;
+    min-height: 28px;
+    border-radius: 7px;
+  }
+  :global(.macos) .suggestion {
+    left: var(--titlebar-inset);
+    padding: 5px 5px 5px 10px;
+    -webkit-backdrop-filter: blur(24px) saturate(1.8);
+    backdrop-filter: blur(24px) saturate(1.8);
+    border: 0;
+  }
+  :global(.macos.fullscreen) .suggestion {
+    left: 12px;
+  }
+  :global(.macos) .content {
+    padding: 4px 20px 24px;
+  }
+  :global(.macos) .skeleton .thumb,
+  :global(.macos) .line {
+    border-radius: 6px;
+  }
+  :global(.macos) .empty {
+    padding-top: 80px;
+    gap: 6px;
+  }
+  :global(.macos) .empty-icon {
+    width: 56px;
+    height: 56px;
+  }
+  :global(.macos) kbd {
+    font: 500 12px/1 var(--font);
+    padding: 2px 5px;
+    border: 0;
+    border-radius: 5px;
+    background: var(--fill-control);
+    box-shadow: var(--shadow-button);
+  }
+  :global(.macos) .list-header .link {
+    margin-right: -4px;
+  }
+  :global(.macos) .list {
+    gap: 0;
+    border-radius: var(--radius-overlay);
+    background: var(--fill-card);
+    box-shadow: inset 0 0 0 0.5px var(--stroke-card);
+  }
+  :global(.macos) .drop-card {
+    border-radius: 14px;
+    -webkit-backdrop-filter: blur(24px) saturate(1.8);
+    backdrop-filter: blur(24px) saturate(1.8);
   }
   @keyframes enter {
     from {

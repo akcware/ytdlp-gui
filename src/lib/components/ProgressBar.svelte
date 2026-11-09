@@ -1,4 +1,5 @@
-<!-- WinUI ProgressBar: 1px track, 3px rounded indicator, two-bar indeterminate motion. -->
+<!-- WinUI ProgressBar: 1px track, 3px rounded indicator, two-bar indeterminate motion.
+     On macOS: a 5px rounded track, like NSProgressIndicator. -->
 <script lang="ts">
   let {
     value = null,
@@ -88,5 +89,18 @@
     100% {
       transform: translateX(170%);
     }
+  }
+
+  :global(.macos) .progress {
+    height: 5px;
+    border-radius: 3px;
+    background: var(--fill-track);
+  }
+  :global(.macos) .progress::before {
+    content: none;
+  }
+  :global(.macos) .bar {
+    height: 5px;
+    border-radius: 3px;
   }
 </style>
