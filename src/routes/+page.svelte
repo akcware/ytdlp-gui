@@ -4,6 +4,7 @@
   import { getVersion } from "@tauri-apps/api/app";
   import { ask, message } from "@tauri-apps/plugin-dialog";
   import { api, errorMessage, formatBytes, hostOf, looksLikeUrl, type VideoInfo } from "$lib/api";
+  import { i18n, t, tp, type LanguagePreference } from "$lib/i18n.svelte";
   import {
     belowElement,
     notify,
@@ -52,13 +53,13 @@
 
   onMount(() => {
     settings.init();
-    tools.init().catch((e) => notice("error", "Bileşenler denetlenemedi", errorMessage(e)));
+    tools.init().catch((e) => notice("error", t("checkFailed"), errorMessage(e)));
     downloads.init();
 
     downloads.onFinished = (job) => {
       if (document.hasFocus()) return;
-      if (job.state === "done") notify("İndirme tamamlandı", job.title);
-      else if (job.state === "error") notify("İndirme başarısız", job.title);
+      if (job.state === "done") notify(t("notifyDone"), job.title);
+      else if (job.state === "error") notify(t("notifyFailed"), job.title);
     };
 
     // Ask before quitting while something is still downloading.
@@ -67,8 +68,8 @@
       if (!n) return;
       event.preventDefault();
       const quit = await ask(
-        `${n} indirme devam ediyor. Çıkarsanız ${n > 1 ? "bunlar" : "bu"} iptal edilecek.`,
-        { title: "yt-dlp GUI", kind: "warning", okLabel: "Çık", cancelLabel: "İptal" },
+        tp("quitMessage", n),
+        { title: "yt-dlp GUI", kind: "warning", okLabel: t("quit"), cancelLabel: t("cancel") },
       );
       if (quit) await getCurrentWindow().destroy();
     });
@@ -109,7 +110,7 @@
     target = target.trim();
     if (!target || !tools.ready) return;
     if (!looksLikeUrl(target)) {
-      notice("warning", "Bu bir bağlantıya benzemiyor", "http:// veya https:// ile başlayan bir adres yapıştırın.");
+      notice("warning", t("notALinkTitle"), t("notALinkMessage"));
       return;
     }
     url = target;
@@ -125,7 +126,7 @@
     } catch (e) {
       if (token !== fetchToken) return;
       info = null;
-      notice("error", "Video bilgisi alınamadı", errorMessage(e));
+      notice("error", t("fetchFailed"), errorMessage(e));
     } finally {
       if (token === fetchToken) fetching = false;
     }
@@ -226,54 +227,70 @@
   async function about() {
     const version = await getVersion().catch(() => "?");
     await message(
-      `yt-dlp GUI ${version}\n\n` +
-        `yt-dlp ${tools.status?.ytdlpVersion ?? "yüklü değil"}\n` +
-        `ffmpeg ${tools.status?.ffmpeg ? "yüklü" : "yüklü değil"}\n\n` +
-        `yt-dlp (Unlicense) ve ffmpeg (GPL) kendi lisanslarıyla, kendi projelerinden indirilir.`,
-      { title: "Hakkında", kind: "info" },
+      t("aboutBody", {
+        version,
+        ytdlp: tools.status?.ytdlpVersion ?? t("notInstalled"),
+        ffmpeg: tools.status?.ffmpeg ? t("installed") : t("notInstalled"),
+      }),
+      { title: t("about"), kind: "info" },
     );
   }
 
   async function updateYtdlp() {
     try {
-      notice("success", await tools.update());
+      const r = await tools.update();
+      notice("success", t(r.updated ? "updated" : "upToDate", { version: r.version }));
     } catch (e) {
-      notice("error", "yt-dlp güncellenemedi", String(e));
+      notice("error", t("updateFailed"), String(e));
     }
   }
 
   async function installFfmpeg() {
     try {
       await tools.install("ffmpeg");
-      notice("success", "ffmpeg hazır", "Artık en yüksek kalitede video ve MP3 indirebilirsiniz.");
+      notice("success", t("ffmpegReady"), t("ffmpegReadyMessage"));
     } catch (e) {
-      notice("error", "ffmpeg indirilemedi", String(e));
+      notice("error", t("ffmpegFailed"), String(e));
     }
   }
 
   function openFolder(path: string | undefined) {
-    if (path) api.openPath(path).catch((e) => notice("error", "Klasör açılamadı", errorMessage(e)));
+    if (path) api.openPath(path).catch((e) =>
+        notice("error", t("folderOpenFailed"), errorMessage(e) === "NOT_FOUND" ? t("fileNotFound") : errorMessage(e)),
+      );
   }
 
   function moreMenu() {
     if (!moreButton) return;
     const s = tools.status;
     const entries: MenuEntry[] = [
-      { text: `yt-dlp ${s?.ytdlpVersion ?? "yüklü değil"}`, enabled: false },
-      { text: s?.ffmpeg ? "ffmpeg yüklü" : "ffmpeg yüklü değil", enabled: false },
+      { text: `yt-dlp ${s?.ytdlpVersion ?? t("notInstalled")}`, enabled: false },
+      { text: s?.ffmpeg ? t("menuFfmpegInstalled") : t("menuFfmpegMissing"), enabled: false },
       "separator",
-      { text: "yt-dlp'yi güncelle", action: updateYtdlp, enabled: !tools.busy },
+      { text: t("updateYtdlp"), action: updateYtdlp, enabled: !tools.busy },
     ];
-    if (s && !s.ffmpeg) entries.push({ text: "ffmpeg'i indir", action: installFfmpeg, enabled: !tools.busy });
+    if (s && !s.ffmpeg) entries.push({ text: t("downloadFfmpeg"), action: installFfmpeg, enabled: !tools.busy });
     entries.push(
       "separator",
-      { text: "İndirme klasörünü aç", action: () => openFolder(settings.outDir) },
-      { text: "Bileşen klasörünü aç", action: () => openFolder(s?.binDir) },
+      { text: t("openDownloadFolder"), action: () => openFolder(settings.outDir) },
+      { text: t("openComponentFolder"), action: () => openFolder(s?.binDir) },
       "separator",
-      { text: "Hakkında", action: about },
+      ...languageEntries(),
+      "separator",
+      { text: t("about"), action: about },
     );
     const at = belowElement(moreButton);
     showMenu(entries, { x: at.x + moreButton.offsetWidth - 220, y: at.y });
+  }
+
+  /** Language choices, each shown in its own language. */
+  function languageEntries(): MenuEntry[] {
+    const choice = (p: LanguagePreference, text: string): MenuEntry => ({
+      text,
+      checked: i18n.preference === p,
+      action: () => i18n.setPreference(p),
+    });
+    return [choice("system", t("languageSystem")), choice("en", "English"), choice("tr", "Türkçe")];
   }
 
   function focusOnLoad(node: HTMLInputElement) {
@@ -300,31 +317,31 @@
           bind:value={url}
           use:focusOnLoad
           type="text"
-          placeholder="Video, playlist veya kanal bağlantısı yapıştırın"
-          aria-label="Bağlantı"
+          placeholder={t("urlPlaceholder")}
+          aria-label={t("linkLabel")}
           spellcheck="false"
           autocomplete="off"
           {onpaste}
           onkeydown={(e) => e.key === "Enter" && !e.ctrlKey && !e.metaKey && fetchInfo()}
         />
         {#if url}
-          <button class="btn subtle icon" title="Temizle" aria-label="Temizle" onclick={clearVideo}>
+          <button class="btn subtle icon" title={t("clear")} aria-label={t("clear")} onclick={clearVideo}>
             <Icon name="cancel" size={12} />
           </button>
         {:else}
-          <button class="btn subtle icon" title="Yapıştır (Ctrl+V)" aria-label="Yapıştır" onclick={pasteAndFetch}>
+          <button class="btn subtle icon" title={t("pasteShortcut")} aria-label={t("paste")} onclick={pasteAndFetch}>
             <Icon name="paste" size={14} />
           </button>
         {/if}
       </div>
       <button class="btn accent fetch" onclick={() => fetchInfo()} disabled={fetching || !url.trim()}>
-        {#if fetching}<ProgressRing size={16} />{:else}Getir{/if}
+        {#if fetching}<ProgressRing size={16} />{:else}{t("fetch")}{/if}
       </button>
       <button
         bind:this={moreButton}
         class="btn subtle icon"
-        title="Diğer seçenekler"
-        aria-label="Diğer seçenekler"
+        title={t("moreOptions")}
+        aria-label={t("moreOptions")}
         onclick={moreMenu}
       >
         <Icon name="more" />
@@ -335,9 +352,9 @@
       {#if suggestion}
         <div class="suggestion" role="status">
           <Icon name="paste" size={14} />
-          <span class="ellipsis">Panoda bir bağlantı var: <span class="text-2">{hostOf(suggestion) || suggestion}</span></span>
-          <button class="btn small accent" onclick={() => fetchInfo(suggestion!)}>Getir</button>
-          <button class="btn small subtle icon" aria-label="Yoksay" title="Yoksay" onclick={() => (suggestion = null)}>
+          <span class="ellipsis">{t("clipboardHasLink")} <span class="text-2">{hostOf(suggestion) || suggestion}</span></span>
+          <button class="btn small accent" onclick={() => fetchInfo(suggestion!)}>{t("fetch")}</button>
+          <button class="btn small subtle icon" aria-label={t("dismiss")} title={t("dismiss")} onclick={() => (suggestion = null)}>
             <Icon name="cancel" size={10} />
           </button>
         </div>
@@ -350,18 +367,18 @@
         {#if tools.status && !tools.status.ffmpeg && !ffmpegDismissed}
           <InfoBar
             severity="warning"
-            title="ffmpeg yüklü değil"
-            message="720p üstü video ve MP3 dönüştürme için gerekli."
+            title={t("ffmpegMissingTitle")}
+            message={t("ffmpegMissingMessage")}
             onclose={tools.busy === "ffmpeg" ? undefined : () => (ffmpegDismissed = true)}
           >
             {#snippet action()}
               {#if tools.busy === "ffmpeg"}
                 <span class="busy caption">
                   <ProgressRing size={16} />
-                  {tools.phase === "extract" ? "Arşiv açılıyor…" : formatBytes(tools.bytes)}
+                  {tools.phase === "extract" ? t("extracting") : formatBytes(tools.bytes)}
                 </span>
               {:else}
-                <button class="btn" onclick={installFfmpeg} disabled={!!tools.busy}>İndir</button>
+                <button class="btn" onclick={installFfmpeg} disabled={!!tools.busy}>{t("download")}</button>
               {/if}
             {/snippet}
           </InfoBar>
@@ -372,7 +389,7 @@
         {/each}
 
         {#if fetching && !info}
-          <section class="card skeleton" aria-busy="true" aria-label="Video bilgisi alınıyor">
+          <section class="card skeleton" aria-busy="true" aria-label={t("loadingInfo")}>
             <div class="shimmer thumb"></div>
             <div class="lines">
               <div class="shimmer line" style:width="70%"></div>
@@ -393,25 +410,26 @@
         {#if empty}
           <div class="empty">
             <div class="empty-icon"><Icon name="download" size={32} /></div>
-            <div class="subtitle">Bir bağlantı yapıştırarak başlayın</div>
+            <div class="subtitle">{t("emptyTitle")}</div>
             <p class="text-2">
-              YouTube ve yüzlerce siteden video ya da ses indirin. Bağlantıyı
-              <kbd>Ctrl</kbd>+<kbd>V</kbd> ile yapıştırabilir ya da pencereye sürükleyebilirsiniz.
+              {t("emptyBefore")}
+              <kbd>Ctrl</kbd>+<kbd>V</kbd>
+              {t("emptyAfter")}
             </p>
-            <button class="btn" onclick={pasteAndFetch}><Icon name="paste" />Panodan yapıştır</button>
+            <button class="btn" onclick={pasteAndFetch}><Icon name="paste" />{t("pasteFromClipboard")}</button>
           </div>
         {/if}
 
         {#if downloads.jobs.length}
           <div class="list-header">
-            <span class="group-header">İndirmeler</span>
+            <span class="group-header">{t("downloads")}</span>
             {#if downloads.finished.length}
-              <button class="link" onclick={() => downloads.clearFinished()}>Bitenleri temizle</button>
+              <button class="link" onclick={() => downloads.clearFinished()}>{t("clearFinished")}</button>
             {/if}
           </div>
           <div class="list" role="list">
             {#each downloads.jobs as job (job.key)}
-              <DownloadItem {job} onerror={(m) => notice("error", "Açılamadı", m)} />
+              <DownloadItem {job} onerror={(m) => notice("error", t("openFailed"), m)} />
             {/each}
           </div>
         {/if}
@@ -424,7 +442,7 @@
   <div class="dropzone" aria-hidden="true">
     <div class="drop-card">
       <Icon name="link" size={28} />
-      <span class="subtitle">Bağlantıyı bırakın</span>
+      <span class="subtitle">{t("dropLink")}</span>
     </div>
   </div>
 {/if}

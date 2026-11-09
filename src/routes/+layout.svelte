@@ -3,6 +3,7 @@
   import { onMount, tick, type Snippet } from "svelte";
   import { api } from "$lib/api";
   import { showWindow } from "$lib/native.svelte";
+  import { i18n } from "$lib/i18n.svelte";
   import MenuFlyout from "$lib/components/MenuFlyout.svelte";
 
   let { children }: { children: Snippet } = $props();
@@ -24,6 +25,11 @@
       // keep the solid background and default accent
     }
   }
+
+  // Screen readers and spell-checking follow the app language.
+  $effect(() => {
+    document.documentElement.lang = i18n.locale;
+  });
 
   onMount(async () => {
     await applyAppearance();

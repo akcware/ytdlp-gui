@@ -26,6 +26,7 @@
 - **Live progress** with percentage, size, speed and remaining time, plus the merge/convert step.
 - **Parallel downloads** with cancel, retry, open and "show in folder". Your download history is kept between launches.
 - **Playlists** download in full into `Playlist Title/001 - Title [id].mp4`.
+- **English and Turkish.** The app follows your Windows display language, and you can change it from the `…` menu.
 - **No bundled binaries.** yt-dlp and ffmpeg are downloaded on first run into the app's own folder, and yt-dlp updates itself with `yt-dlp -U`. Nothing is installed system-wide.
 
 ### Feels like a Windows 11 app
@@ -49,8 +50,6 @@
 <p align="center">
   <img src="docs/screenshot-light.png" width="760" alt="yt-dlp GUI in light mode">
 </p>
-
-> The user interface is currently in Turkish.
 
 ## Download
 
@@ -112,7 +111,9 @@ src/
   lib/components/         ComboBox, Segmented, InfoBar, ProgressBar/Ring, DownloadItem, VideoPanel, Onboarding…
   lib/state/              settings / tools / downloads stores (Svelte 5 runes, persisted)
   lib/native.svelte.ts    native menus, clipboard, notifications, taskbar progress
-  lib/api.ts              typed wrappers for the Rust commands, formatting helpers
+  lib/i18n.svelte.ts      tiny i18n: t() / tp(), language preference
+  lib/locales/            en.ts (reference) and tr.ts; the type checker flags missing keys
+  lib/api.ts              typed wrappers for the Rust commands, locale-aware formatting
   lib/mock.ts             fake backend for UI work in a browser
 src-tauri/src/
   lib.rs                  app setup, plugins, commands, kills running downloads on exit
@@ -122,6 +123,12 @@ src-tauri/src/
   process.rs              spawning without console windows, killing process trees
 app-icon.svg              icon source (regenerate with `bunx tauri icon app-icon.svg`)
 ```
+
+## Adding a language
+
+1. Copy `src/lib/locales/tr.ts` to `src/lib/locales/<code>.ts` and translate the values. The type makes sure no key is missing.
+2. Register it in `src/lib/i18n.svelte.ts`: add it to `Locale`, `dictionaries`, `systemLocale()` and the Intl tag.
+3. Add it to the language list in `languageEntries()` in `src/routes/+page.svelte`. Language names stay in their own language.
 
 ## Credits and disclaimer
 

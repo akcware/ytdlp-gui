@@ -16,7 +16,8 @@ use tauri_plugin_window_state::StateFlags;
 #[tauri::command]
 fn open_path(app: AppHandle, path: String) -> Result<(), String> {
     if !Path::new(&path).exists() {
-        return Err("Dosya bulunamadı. Taşınmış ya da silinmiş olabilir.".into());
+        // A code, not a message: the UI shows it in the user's language.
+        return Err("NOT_FOUND".into());
     }
     app.opener()
         .open_path(path, None::<&str>)

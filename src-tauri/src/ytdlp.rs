@@ -115,7 +115,7 @@ fn summarize(raw: RawInfo) -> VideoInfo {
 
     VideoInfo {
         id: raw.id.unwrap_or_default(),
-        title: raw.title.unwrap_or_else(|| "(başlıksız)".into()),
+        title: raw.title.unwrap_or_default(), // the UI shows "(untitled)"
         uploader: raw.uploader.or(raw.channel),
         duration: raw.duration,
         thumbnail: raw.thumbnail,
@@ -139,7 +139,7 @@ fn error_text(stderr: &str) -> String {
         .filter(|l| l.starts_with("ERROR:"))
         .collect();
     if errors.is_empty() {
-        stderr.trim().lines().last().unwrap_or("Bilinmeyen hata").to_string()
+        stderr.trim().lines().last().unwrap_or("Unknown error").to_string()
     } else {
         errors.join("\n")
     }
@@ -160,12 +160,12 @@ pub async fn fetch_info(app: AppHandle, url: String) -> Result<VideoInfo, String
             ])
             .arg(&url)
             .output()
-            .map_err(|e| format!("yt-dlp çalıştırılamadı: {e}"))?;
+            .map_err(|e| format!("Couldn't run yt-dlp: {e}"))?;
         if !out.status.success() {
             return Err(error_text(&String::from_utf8_lossy(&out.stderr)));
         }
         let raw: RawInfo = serde_json::from_slice(&out.stdout)
-            .map_err(|e| format!("yt-dlp çıktısı okunamadı: {e}"))?;
+            .map_err(|e| format!("Couldn't read yt-dlp's output: {e}"))?;
         Ok(summarize(raw))
     })
     .await
@@ -276,7 +276,7 @@ fn build_args(req: &DownloadRequest, has_ffmpeg: bool) -> Result<Vec<String>, St
         "audio" => {
             let fmt = req.audio_format.as_deref().unwrap_or("mp3");
             if !matches!(fmt, "mp3" | "m4a") {
-                return Err(format!("Desteklenmeyen ses biçimi: {fmt}"));
+                return Err(format!("Unsupported audio format: {fmt}"));
             }
             if has_ffmpeg {
                 push(
@@ -288,7 +288,7 @@ fn build_args(req: &DownloadRequest, has_ffmpeg: bool) -> Result<Vec<String>, St
                 push(&mut args, &["-f", "ba[ext=m4a]/ba"]);
             }
         }
-        other => return Err(format!("Bilinmeyen mod: {other}")),
+        other => return Err(format!("Unknown mode: {other}")),
     }
 
     let template = if req.playlist {
@@ -382,7 +382,7 @@ pub fn start_download(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|e| format!("yt-dlp başlatılamadı: {e}"))?;
+        .map_err(|e| format!("Couldn't start yt-dlp: {e}"))?;
 
     let id = jobs.next_id.fetch_add(1, Ordering::Relaxed) + 1;
     jobs.pids.lock().unwrap().insert(id, child.id());

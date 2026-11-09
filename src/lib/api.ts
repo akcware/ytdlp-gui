@@ -1,6 +1,7 @@
 // Typed wrappers around the Rust commands in src-tauri/src/*.rs.
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { i18n, t } from "./i18n.svelte";
 
 export type Appearance = {
   backdrop: "mica" | "none";
@@ -86,38 +87,46 @@ export const onDownloadEvent = (cb: (e: DownloadEvent) => void): Promise<Unliste
 export const onToolProgress = (cb: (e: ToolProgress) => void): Promise<UnlistenFn> =>
   listen<ToolProgress>("tool-progress", (e) => cb(e.payload));
 
-// ---- formatting (Turkish locale, like the rest of Windows) -----------------
+// ---- formatting (follows the app language) -----------------------------------
 
-const num1 = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 1, minimumFractionDigits: 1 });
-const num0 = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 0 });
+const numberFormats = new Map<string, Intl.NumberFormat>();
+function num(n: number, digits: 0 | 1): string {
+  const key = `${i18n.tag}/${digits}`;
+  let f = numberFormats.get(key);
+  if (!f) {
+    f = new Intl.NumberFormat(i18n.tag, { maximumFractionDigits: digits, minimumFractionDigits: digits });
+    numberFormats.set(key, f);
+  }
+  return f.format(n);
+}
 
 export function formatBytes(n: number | null | undefined): string {
   if (n == null || !isFinite(n)) return "?";
-  const units = ["bayt", "KB", "MB", "GB", "TB"];
+  const units = [t("bytes"), "KB", "MB", "GB", "TB"];
   let i = 0;
   while (n >= 1024 && i < units.length - 1) {
     n /= 1024;
     i++;
   }
-  return `${(i >= 2 ? num1 : num0).format(n)} ${units[i]}`;
+  return `${num(n, i >= 2 ? 1 : 0)} ${units[i]}`;
 }
 
 export function formatSpeed(bytesPerSec: number | null | undefined): string {
-  return bytesPerSec ? `${formatBytes(bytesPerSec)}/sn` : "";
+  return bytesPerSec ? t("perSecond", { size: formatBytes(bytesPerSec) }) : "";
 }
 
 export function formatPercent(p: number): string {
-  return `%${num0.format(Math.floor(p))}`;
+  return t("percent", { n: num(Math.floor(p), 0) });
 }
 
-/** Remaining time, phrased the way Windows' copy dialog does. */
+/** Remaining time, phrased like the Windows copy dialog. */
 export function formatEta(sec: number | null | undefined): string {
   if (sec == null || !isFinite(sec) || sec < 0) return "";
-  if (sec < 60) return `${Math.max(1, Math.round(sec))} sn kaldı`;
-  if (sec < 3600) return `${Math.ceil(sec / 60)} dk kaldı`;
+  if (sec < 60) return t("etaSeconds", { n: Math.max(1, Math.round(sec)) });
+  if (sec < 3600) return t("etaMinutes", { n: Math.ceil(sec / 60) });
   const h = Math.floor(sec / 3600);
   const m = Math.round((sec % 3600) / 60);
-  return m ? `${h} sa ${m} dk kaldı` : `${h} sa kaldı`;
+  return m ? t("etaHoursMinutes", { h, m }) : t("etaHours", { h });
 }
 
 export function formatDuration(sec: number | null | undefined): string {

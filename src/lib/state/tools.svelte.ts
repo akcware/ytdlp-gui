@@ -48,16 +48,18 @@ class Tools {
     }
   }
 
-  /** Returns yt-dlp's last output line, e.g. "yt-dlp is up to date (…)". */
-  async update(): Promise<string> {
+  /** Runs `yt-dlp -U` and reports whether the version changed. */
+  async update(): Promise<{ updated: boolean; version: string }> {
     this.busy = "update";
     try {
       const out = await api.updateYtdlp();
       const before = this.status?.ytdlpVersion;
       await this.refresh();
       const after = this.status?.ytdlpVersion;
-      if (after && before && after !== before) return `yt-dlp ${after} sürümüne güncellendi.`;
-      return after ? `yt-dlp güncel (${after}).` : (out.split("\n").filter(Boolean).pop() ?? "");
+      return {
+        updated: !!after && !!before && after !== before,
+        version: after ?? out.split("\n").filter(Boolean).pop() ?? "",
+      };
     } catch (e) {
       throw errorMessage(e);
     } finally {

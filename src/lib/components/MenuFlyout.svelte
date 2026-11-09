@@ -5,11 +5,15 @@
 <script lang="ts">
   import { tick } from "svelte";
   import { fallbackMenu, type MenuEntry } from "$lib/native.svelte";
+  import { GLYPHS } from "./Icon.svelte";
 
   let el: HTMLDivElement | undefined = $state();
   let pos = $state({ x: 0, y: 0 });
 
   const menu = $derived(fallbackMenu.current);
+  const checked = (e: MenuEntry) => e !== "separator" && "checked" in e ? e.checked : undefined;
+  /** Reserve a check column when any item is a check item (like WinUI). */
+  const hasChecks = $derived(!!menu?.entries.some((e) => checked(e) !== undefined));
 
   $effect(() => {
     if (!menu) return;
@@ -64,7 +68,13 @@
       {#if entry === "separator"}
         <div class="separator" role="separator"></div>
       {:else}
-        <button role="menuitem" disabled={entry.enabled === false} onclick={() => run(entry)}>
+        <button
+          role={checked(entry) !== undefined ? "menuitemcheckbox" : "menuitem"}
+          aria-checked={checked(entry)}
+          disabled={entry.enabled === false}
+          onclick={() => run(entry)}
+        >
+          {#if hasChecks}<span class="glyph check">{checked(entry) ? GLYPHS.check : ""}</span>{/if}
           {entry.text}
         </button>
       {/if}
@@ -107,6 +117,15 @@
   button:disabled {
     color: var(--text-disabled);
     background: transparent;
+  }
+  button {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .check {
+    width: 16px;
+    font-size: 12px;
   }
   .separator {
     height: 1px;

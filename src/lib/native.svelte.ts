@@ -1,7 +1,7 @@
 // Bridges to OS features that make the app feel native: real context menus,
 // taskbar progress, toast notifications, clipboard and window lifecycle.
 import { getCurrentWindow, ProgressBarStatus } from "@tauri-apps/api/window";
-import { Menu, MenuItem, PredefinedMenuItem } from "@tauri-apps/api/menu";
+import { CheckMenuItem, Menu, MenuItem, PredefinedMenuItem } from "@tauri-apps/api/menu";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
@@ -16,7 +16,8 @@ export const isMock = (): boolean => (globalThis as any).__YTDLP_MOCK__ === true
 // ---- menus -------------------------------------------------------------------
 
 export type MenuEntry =
-  | { text: string; action: () => void; enabled?: boolean }
+  /** `checked` set (true/false) makes it a check item, e.g. for a language choice. */
+  | { text: string; action: () => void; enabled?: boolean; checked?: boolean }
   | { text: string; enabled: false }
   | "separator";
 
@@ -36,11 +37,18 @@ export async function showMenu(entries: MenuEntry[], at: { x: number; y: number 
         entries.map((e) =>
           e === "separator"
             ? PredefinedMenuItem.new({ item: "Separator" })
-            : MenuItem.new({
-                text: e.text,
-                enabled: e.enabled ?? true,
-                action: "action" in e ? () => e.action() : undefined,
-              }),
+            : "checked" in e && e.checked !== undefined
+              ? CheckMenuItem.new({
+                  text: e.text,
+                  checked: e.checked,
+                  enabled: e.enabled ?? true,
+                  action: () => e.action(),
+                })
+              : MenuItem.new({
+                  text: e.text,
+                  enabled: e.enabled ?? true,
+                  action: "action" in e ? () => e.action() : undefined,
+                }),
         ),
       );
       const menu = await Menu.new({ items });

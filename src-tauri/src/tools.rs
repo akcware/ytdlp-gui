@@ -55,7 +55,7 @@ pub fn bin_dir(app: &AppHandle) -> Result<PathBuf, String> {
         .app_local_data_dir()
         .map_err(|e| e.to_string())?
         .join("bin");
-    fs::create_dir_all(&dir).map_err(|e| format!("Klasör oluşturulamadı: {e}"))?;
+    fs::create_dir_all(&dir).map_err(|e| format!("Couldn't create the folder: {e}"))?;
     Ok(dir)
 }
 
@@ -113,7 +113,7 @@ fn download_file(app: &AppHandle, url: &str, dest: &Path, tool: &str) -> Result<
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|e| format!("curl başlatılamadı: {e}"))?;
+        .map_err(|e| format!("Couldn't start curl: {e}"))?;
 
     loop {
         if let Some(exit) = child.try_wait().map_err(|e| e.to_string())? {
@@ -123,7 +123,7 @@ fn download_file(app: &AppHandle, url: &str, dest: &Path, tool: &str) -> Result<
                     let _ = stderr.read_to_string(&mut err);
                 }
                 let _ = fs::remove_file(&part);
-                return Err(format!("{tool} indirilemedi: {}", err.trim()));
+                return Err(format!("Couldn't download {tool}: {}", err.trim()));
             }
             break;
         }
@@ -139,7 +139,7 @@ fn download_file(app: &AppHandle, url: &str, dest: &Path, tool: &str) -> Result<
         thread::sleep(Duration::from_millis(250));
     }
 
-    fs::rename(&part, dest).map_err(|e| format!("{tool} kaydedilemedi: {e}"))
+    fs::rename(&part, dest).map_err(|e| format!("Couldn't save {tool}: {e}"))
 }
 
 #[cfg(unix)]
@@ -172,7 +172,7 @@ pub async fn update_ytdlp(app: AppHandle) -> Result<String, String> {
         let out = hidden_command(ytdlp_path(&app)?)
             .arg("-U")
             .output()
-            .map_err(|e| format!("yt-dlp çalıştırılamadı: {e}"))?;
+            .map_err(|e| format!("Couldn't run yt-dlp: {e}"))?;
         let text = format!(
             "{}{}",
             String::from_utf8_lossy(&out.stdout),
@@ -213,10 +213,10 @@ pub async fn install_ffmpeg(app: AppHandle) -> Result<ToolStatus, String> {
             .arg("-C")
             .arg(&tmp)
             .output()
-            .map_err(|e| format!("tar başlatılamadı: {e}"))?;
+            .map_err(|e| format!("Couldn't start tar: {e}"))?;
         if !out.status.success() {
             return Err(format!(
-                "ffmpeg arşivi açılamadı: {}",
+                "Couldn't extract the ffmpeg archive: {}",
                 String::from_utf8_lossy(&out.stderr).trim()
             ));
         }
@@ -227,10 +227,10 @@ pub async fn install_ffmpeg(app: AppHandle) -> Result<ToolStatus, String> {
             .filter_map(Result::ok)
             .map(|entry| entry.path().join("bin"))
             .find(|dir| dir.join("ffmpeg.exe").exists())
-            .ok_or("Arşivde ffmpeg.exe bulunamadı")?;
+            .ok_or("ffmpeg.exe was not found in the archive")?;
         for name in ["ffmpeg.exe", "ffprobe.exe"] {
             fs::rename(inner.join(name), bin.join(name))
-                .map_err(|e| format!("{name} taşınamadı: {e}"))?;
+                .map_err(|e| format!("Couldn't move {name}: {e}"))?;
         }
 
         let _ = fs::remove_dir_all(&tmp);
@@ -243,5 +243,5 @@ pub async fn install_ffmpeg(app: AppHandle) -> Result<ToolStatus, String> {
 #[cfg(not(windows))]
 #[tauri::command]
 pub async fn install_ffmpeg(_app: AppHandle) -> Result<ToolStatus, String> {
-    Err("Bu platformda ffmpeg'i paket yöneticisiyle kurun (ör. brew install ffmpeg).".into())
+    Err("Install ffmpeg with your package manager on this platform (e.g. brew install ffmpeg).".into())
 }

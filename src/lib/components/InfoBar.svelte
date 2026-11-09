@@ -2,6 +2,7 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import { GLYPHS } from "./Icon.svelte";
+  import { t } from "$lib/i18n.svelte";
 
   let {
     severity = "info",
@@ -32,7 +33,7 @@
   </div>
   {#if action}<div class="action">{@render action()}</div>{/if}
   {#if onclose}
-    <button class="btn subtle icon close" aria-label="Kapat" title="Kapat" onclick={onclose}>
+    <button class="btn subtle icon close" aria-label={t("close")} title={t("close")} onclick={onclose}>
       <span class="glyph" style:font-size="12px">{GLYPHS.cancel}</span>
     </button>
   {/if}

@@ -8,6 +8,7 @@
     formatPercent,
     formatSpeed,
   } from "$lib/api";
+  import { i18n, t } from "$lib/i18n.svelte";
   import { belowElement, showMenu, writeClipboard, type MenuEntry } from "$lib/native.svelte";
   import { downloads, isActive, type Job } from "$lib/state/downloads.svelte";
   import Icon from "./Icon.svelte";
@@ -21,26 +22,43 @@
     job.request.playlist && job.playlistIndex ? `${job.playlistIndex}/${job.playlistCount ?? "?"}` : null,
   );
 
-  const timeFmt = new Intl.DateTimeFormat("tr-TR", { hour: "2-digit", minute: "2-digit" });
-  const dayFmt = new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "short" });
   function when(ts: number | null) {
     if (!ts) return "";
     const d = new Date(ts);
-    return d.toDateString() === new Date().toDateString() ? timeFmt.format(d) : dayFmt.format(d);
+    const today = d.toDateString() === new Date().toDateString();
+    return new Intl.DateTimeFormat(
+      i18n.tag,
+      today ? { hour: "2-digit", minute: "2-digit" } : { day: "numeric", month: "short" },
+    ).format(d);
+  }
+
+  function stageText(stage: string | null) {
+    switch (stage) {
+      case "Merger":
+        return t("stageMerger");
+      case "ExtractAudio":
+        return t("stageExtractAudio");
+      case "VideoConvertor":
+        return t("stageVideoConvertor");
+      case "MoveFiles":
+        return t("stageMoveFiles");
+      default:
+        return t("processing");
+    }
   }
 
   const status = $derived.by(() => {
     switch (job.state) {
       case "starting":
-        return "Hazırlanıyor…";
+        return t("preparing");
       case "processing":
-        return `${job.stage ?? "İşleniyor"}…`;
+        return `${stageText(job.stage)}…`;
       case "cancelled":
-        return "İptal edildi";
+        return t("cancelled");
       case "error":
-        return job.error?.split("\n")[0] ?? "Bir hata oluştu";
+        return job.error?.split("\n")[0] ?? t("errorGeneric");
       case "done": {
-        const parts = ["Tamamlandı"];
+        const parts = [t("completed")];
         if (job.doneBytes > 0) parts.push(formatBytes(job.doneBytes));
         parts.push(when(job.finishedAt));
         return parts.join(" · ");
@@ -48,8 +66,8 @@
       case "downloading": {
         const parts: string[] = [];
         if (playlistProgress) parts.push(playlistProgress);
-        else if (job.request.mode === "video" && job.part > 0) parts.push("Ses");
-        parts.push(job.percent != null ? formatPercent(job.percent) : "İndiriliyor");
+        else if (job.request.mode === "video" && job.part > 0) parts.push(t("audio"));
+        parts.push(job.percent != null ? formatPercent(job.percent) : t("downloading"));
         if (job.total) parts.push(`${formatBytes(job.downloaded)} / ${formatBytes(job.total)}`);
         if (job.speed) parts.push(formatSpeed(job.speed));
         if (job.eta) parts.push(formatEta(job.eta));
@@ -63,7 +81,7 @@
     try {
       await api.openPath(job.file);
     } catch (e) {
-      onerror(errorMessage(e));
+      onerror(errorMessage(e) === "NOT_FOUND" ? t("fileNotFound") : errorMessage(e));
     }
   }
 
@@ -72,29 +90,29 @@
     try {
       await revealItemInDir(job.file);
     } catch {
-      onerror("Dosya bulunamadı. Taşınmış ya da silinmiş olabilir.");
+      onerror(t("fileNotFound"));
     }
   }
 
   function entries(): MenuEntry[] {
     const list: MenuEntry[] = [];
     if (job.state === "done" && job.file) {
-      list.push({ text: "Aç", action: open }, { text: "Klasörde göster", action: reveal }, "separator");
+      list.push({ text: t("open"), action: open }, { text: t("showInFolder"), action: reveal }, "separator");
     }
     list.push(
-      { text: "Bağlantıyı kopyala", action: () => writeClipboard(job.request.url) },
-      { text: "Tarayıcıda aç", action: () => openUrl(job.request.url).catch(() => {}) },
+      { text: t("copyLink"), action: () => writeClipboard(job.request.url) },
+      { text: t("openInBrowser"), action: () => openUrl(job.request.url).catch(() => {}) },
     );
     if (job.state === "error" && job.error) {
-      list.push({ text: "Hata ayrıntısını kopyala", action: () => writeClipboard(job.error ?? "") });
+      list.push({ text: t("copyError"), action: () => writeClipboard(job.error ?? "") });
     }
     list.push("separator");
     if (active) {
-      list.push({ text: "İndirmeyi iptal et", action: () => downloads.cancel(job) });
+      list.push({ text: t("cancelDownload"), action: () => downloads.cancel(job) });
     } else {
       list.push(
-        { text: job.state === "done" ? "Yeniden indir" : "Yeniden dene", action: () => downloads.retry(job) },
-        { text: "Listeden kaldır", action: () => downloads.remove(job) },
+        { text: job.state === "done" ? t("downloadAgain") : t("retry"), action: () => downloads.retry(job) },
+        { text: t("removeFromList"), action: () => downloads.remove(job) },
       );
     }
     return list;
@@ -144,9 +162,9 @@
   </div>
 
   <div class="text">
-    <div class="ellipsis">{job.title}</div>
+    <div class="ellipsis">{job.title || t("untitled")}</div>
     <div class="caption meta">
-      <span class="label">{job.label}</span>
+      <span class="label">{job.label || t("bestQuality")}</span>
       <span class="sep">·</span>
       <span class="ellipsis status" class:critical={job.state === "error"}>{status}</span>
     </div>
@@ -155,28 +173,26 @@
     {/if}
     {#if active}
       <div class="bar">
-        <ProgressBar
-          value={job.state === "downloading" ? job.percent : null}
-        />
+        <ProgressBar value={job.state === "downloading" ? job.percent : null} />
       </div>
     {/if}
   </div>
 
   <div class="actions">
     {#if active}
-      <button class="btn subtle icon" title="İptal et" aria-label="İndirmeyi iptal et" onclick={() => downloads.cancel(job)}>
+      <button class="btn subtle icon" title={t("cancel")} aria-label={t("cancelDownload")} onclick={() => downloads.cancel(job)}>
         <Icon name="cancel" size={14} />
       </button>
     {:else}
       {#if job.state === "done" && job.file}
-        <button class="btn subtle icon" title="Aç" aria-label="Dosyayı aç" onclick={open}>
+        <button class="btn subtle icon" title={t("open")} aria-label={t("openFile")} onclick={open}>
           <Icon name="openFile" />
         </button>
-        <button class="btn subtle icon" title="Klasörde göster" aria-label="Klasörde göster" onclick={reveal}>
+        <button class="btn subtle icon" title={t("showInFolder")} aria-label={t("showInFolder")} onclick={reveal}>
           <Icon name="folderOpen" />
         </button>
       {:else}
-        <button class="btn subtle icon" title="Yeniden dene" aria-label="Yeniden dene" onclick={() => downloads.retry(job)}>
+        <button class="btn subtle icon" title={t("retry")} aria-label={t("retry")} onclick={() => downloads.retry(job)}>
           <Icon name="refresh" />
         </button>
       {/if}
@@ -184,8 +200,8 @@
     <button
       bind:this={moreButton}
       class="btn subtle icon"
-      title="Diğer seçenekler"
-      aria-label="Diğer seçenekler"
+      title={t("moreOptions")}
+      aria-label={t("moreOptions")}
       onclick={() => showMenu(entries(), belowElement(moreButton))}
     >
       <Icon name="more" />

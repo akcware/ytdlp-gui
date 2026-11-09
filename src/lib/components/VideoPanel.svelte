@@ -2,6 +2,7 @@
 <script lang="ts">
   import { open } from "@tauri-apps/plugin-dialog";
   import { formatBytes, formatDuration, hostOf, type VideoInfo } from "$lib/api";
+  import { t, tp } from "$lib/i18n.svelte";
   import { downloads } from "$lib/state/downloads.svelte";
   import { settings } from "$lib/state/settings.svelte";
   import { tools } from "$lib/state/tools.svelte";
@@ -20,7 +21,11 @@
         ? info.qualities
         : GENERIC_HEIGHTS.map((height) => ({ height, fps: null, approxBytes: null }));
     return [
-      { value: null as number | null, label: "En iyi kalite", detail: qs[0]?.approxBytes ? `~${formatBytes(qs[0].approxBytes)}` : undefined },
+      {
+        value: null as number | null,
+        label: t("bestQuality"),
+        detail: qs[0]?.approxBytes ? `~${formatBytes(qs[0].approxBytes)}` : undefined,
+      },
       ...qs.map((q) => ({
         value: q.height as number | null,
         label: `${q.height}p${q.fps && q.fps > 30 ? Math.round(q.fps) : ""}${q.height >= 2160 ? " 4K" : q.height >= 1440 ? " 2K" : ""}`,
@@ -34,35 +39,25 @@
     qualityItems.some((i) => i.value === settings.preferredHeight) ? settings.preferredHeight : null,
   );
 
-  const audioItems = [
-    { value: "mp3" as const, label: "MP3", detail: "Her cihazda çalışır" },
-    { value: "m4a" as const, label: "M4A (AAC)", detail: "Daha küçük dosya" },
-  ];
+  const audioItems = $derived([
+    { value: "mp3" as const, label: "MP3", detail: t("mp3Detail") },
+    { value: "m4a" as const, label: "M4A (AAC)", detail: t("m4aDetail") },
+  ]);
 
   const qualityHint = $derived(
-    !ffmpeg
-      ? "ffmpeg olmadan en fazla tek dosyalık kalite (genelde 360p)"
-      : info.isPlaylist
-        ? "Her video için seçilen kaliteye en yakın sürüm"
-        : "Video ve ses birleştirilip MP4 olarak kaydedilir",
+    !ffmpeg ? t("qualityHintNoFfmpeg") : info.isPlaylist ? t("qualityHintPlaylist") : t("qualityHint"),
   );
 
   async function browse() {
-    const dir = await open({ directory: true, defaultPath: settings.outDir || undefined, title: "Kayıt yeri seçin" });
+    const dir = await open({ directory: true, defaultPath: settings.outDir || undefined, title: t("chooseFolder") });
     if (typeof dir === "string") settings.outDir = dir;
   }
 
   export async function download() {
     if (!settings.outDir) return browse();
     const mode = settings.mode;
-    const label =
-      mode === "audio"
-        ? ffmpeg
-          ? settings.audioFormat.toUpperCase()
-          : "M4A"
-        : quality
-          ? `${quality}p`
-          : "En iyi kalite";
+    // Language-neutral label; an empty one is shown as "Best quality".
+    const label = mode === "audio" ? (ffmpeg ? settings.audioFormat.toUpperCase() : "M4A") : quality ? `${quality}p` : "";
     await downloads.start(
       {
         url,
@@ -87,35 +82,35 @@
     {#if info.duration}<span class="duration caption">{formatDuration(info.duration)}</span>{/if}
   </div>
   <div class="meta">
-    <h2 class="subtitle" title={info.title}>{info.title}</h2>
+    <h2 class="subtitle" title={info.title}>{info.title || t("untitled")}</h2>
     <div class="caption text-2 line">
       {#if info.isPlaylist}
-        <span>Playlist · {info.entryCount ?? "?"} video</span>
+        <span>{info.entryCount != null ? tp("playlistCount", info.entryCount) : "Playlist"}</span>
       {:else if info.uploader}
         <span class="ellipsis">{info.uploader}</span>
       {/if}
       {#if hostOf(url)}<span class="host"><Icon name="globe" size={12} />{hostOf(url)}</span>{/if}
     </div>
   </div>
-  <button class="btn subtle icon close" title="Kapat (Esc)" aria-label="Videoyu kapat" onclick={onclose}>
+  <button class="btn subtle icon close" title={t("closeVideo")} aria-label={t("closeVideoLabel")} onclick={onclose}>
     <Icon name="cancel" size={12} />
   </button>
 </section>
 
-<div class="group-header">İndirme seçenekleri</div>
+<div class="group-header">{t("downloadOptions")}</div>
 <div class="setting-group">
   <div class="setting">
     <Icon name={settings.mode === "video" ? "video" : "audio"} size={20} />
     <div class="setting-text">
-      <span>Tür</span>
-      <span class="caption">Görüntülü video ya da yalnızca ses</span>
+      <span>{t("type")}</span>
+      <span class="caption">{t("typeHint")}</span>
     </div>
     <Segmented
-      label="İndirme türü"
+      label={t("downloadType")}
       bind:value={settings.mode}
       items={[
-        { value: "video", label: "Video", icon: "video" },
-        { value: "audio", label: "Ses", icon: "audio" },
+        { value: "video", label: t("video"), icon: "video" },
+        { value: "audio", label: t("audio"), icon: "audio" },
       ]}
     />
   </div>
@@ -124,11 +119,11 @@
     <div class="setting">
       <Icon name="settings" size={20} />
       <div class="setting-text">
-        <span>Kalite</span>
+        <span>{t("quality")}</span>
         <span class="caption">{qualityHint}</span>
       </div>
       <ComboBox
-        label="Kalite"
+        label={t("quality")}
         items={qualityItems}
         bind:value={() => quality, (v) => (settings.preferredHeight = v)}
       />
@@ -137,22 +132,20 @@
     <div class="setting">
       <Icon name="audio" size={20} />
       <div class="setting-text">
-        <span>Ses biçimi</span>
-        <span class="caption">
-          {ffmpeg ? "En yüksek kalitede dönüştürülür" : "ffmpeg olmadan dönüştürme yapılamaz; orijinal M4A indirilir"}
-        </span>
+        <span>{t("audioFormat")}</span>
+        <span class="caption">{ffmpeg ? t("audioHint") : t("audioHintNoFfmpeg")}</span>
       </div>
-      <ComboBox label="Ses biçimi" items={audioItems} bind:value={settings.audioFormat} disabled={!ffmpeg} />
+      <ComboBox label={t("audioFormat")} items={audioItems} bind:value={settings.audioFormat} disabled={!ffmpeg} />
     </div>
   {/if}
 
   <div class="setting">
     <Icon name="folder" size={20} />
     <div class="setting-text">
-      <span>Kayıt yeri</span>
-      <span class="caption ellipsis" title={settings.outDir}>{settings.outDir || "Seçilmedi"}</span>
+      <span>{t("saveLocation")}</span>
+      <span class="caption ellipsis" title={settings.outDir}>{settings.outDir || t("notSelected")}</span>
     </div>
-    <button class="btn" onclick={browse}>Gözat…</button>
+    <button class="btn" onclick={browse}>{t("browse")}</button>
   </div>
 </div>
 
@@ -160,7 +153,13 @@
   <span class="caption text-3">Ctrl+Enter</span>
   <button class="btn accent" onclick={download}>
     <Icon name="download" />
-    {info.isPlaylist ? `${info.entryCount ?? ""} videoyu indir`.trim() : "İndir"}
+    {#if !info.isPlaylist}
+      {t("download")}
+    {:else if info.entryCount != null}
+      {tp("downloadVideos", info.entryCount)}
+    {:else}
+      {t("downloadPlaylist")}
+    {/if}
   </button>
 </div>
 

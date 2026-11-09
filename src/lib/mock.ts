@@ -71,7 +71,7 @@ export function installMocks() {
         eta: (total - done) / 7.4e6,
         playlistIndex: playlist ? item : null,
         playlistCount: playlist ? items : null,
-        title: playlist ? `Bölüm ${item}: Dağlarda bir gün` : "Gün batımında dağlar",
+        title: playlist ? `Part ${item}: A day in the mountains` : "Sunset over the mountains",
       });
       if (done >= total) {
         part++;
@@ -86,7 +86,7 @@ export function installMocks() {
           timers.delete(id);
           send({ kind: "postprocess", id, status: "started", processor: mode === "video" ? "Merger" : "ExtractAudio" });
           setTimeout(() => {
-            send({ kind: "file", id, path: "C:\\Users\\demo\\Downloads\\Gün batımında dağlar [abc123].mp4" });
+            send({ kind: "file", id, path: "C:\\Users\\demo\\Downloads\\Sunset over the mountains [abc123].mp4" });
             send({ kind: "done", id, ok: true, cancelled: false, error: null });
           }, 1400);
         }
@@ -126,8 +126,8 @@ export function installMocks() {
           const playlist = url.includes("playlist");
           return {
             id: "abc123",
-            title: playlist ? "Dağlarda bir gün — tüm bölümler" : "Gün batımında dağlar — 4K doğa yürüyüşü",
-            uploader: "Kuzey Rotası",
+            title: playlist ? "A day in the mountains — all parts" : "Sunset over the mountains — 4K nature walk",
+            uploader: "North Trail",
             duration: playlist ? null : 754,
             thumbnail: THUMB,
             isPlaylist: playlist,

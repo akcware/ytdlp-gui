@@ -16,7 +16,7 @@ export type Job = {
   request: DownloadRequest;
   title: string;
   thumbnail: string | null;
-  /** "1080p", "MP3", "En iyi kalite"… */
+  /** "1080p", "MP3"…; empty means best quality (translated when shown) */
   label: string;
   state: JobState;
   percent: number | null;
@@ -24,6 +24,7 @@ export type Job = {
   total: number | null;
   speed: number | null;
   eta: number | null;
+  /** yt-dlp postprocessor name while post-processing, e.g. "Merger" */
   stage: string | null;
   /** finished streams (video + audio = 2) */
   part: number;
@@ -40,13 +41,6 @@ export type Job = {
 
 const HISTORY_KEY = "history.v1";
 const HISTORY_LIMIT = 100;
-
-const STAGES: Record<string, string> = {
-  Merger: "Video ve ses birleştiriliyor",
-  ExtractAudio: "Ses dönüştürülüyor",
-  VideoConvertor: "Video dönüştürülüyor",
-  MoveFiles: "Dosya taşınıyor",
-};
 
 export const isActive = (j: Job) =>
   j.state === "starting" || j.state === "downloading" || j.state === "processing";
@@ -188,7 +182,7 @@ class Downloads {
       case "postprocess":
         if (e.status === "started") {
           job.state = "processing";
-          job.stage = STAGES[e.processor] ?? "İşleniyor";
+          job.stage = e.processor; // translated when shown
         }
         break;
       case "file":
