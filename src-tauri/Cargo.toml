@@ -1,6 +1,6 @@
 [package]
 name = "ytdlp-gui"
-version = "0.1.0"
+version = "0.2.0"
 description = "Lightweight, native-feeling Windows desktop app for yt-dlp"
 authors = ["Aşkın Kadir Çekim"]
 license = "MIT"
